@@ -13,5 +13,5 @@ This repo is currently under construction ...
 <div align="center">
   <img src="img/construction.png"
        alt="Construction Worker Icon"
-       style="width:200px"/>
+       width="200"/>
 </div>
