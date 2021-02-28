@@ -10,5 +10,8 @@ This repository will house the primary application suite for the [2021 Mechatron
 
 ## Info
 This repo is currently under construction ... 
-![](https://www.kindpng.com/picc/m/81-819689_monitoring-and-resolution-construction-worker-icon-png-transparent.png)
-
+<div align="center">
+  <img src="https://www.kindpng.com/picc/m/81-819689_monitoring-and-resolution-construction-worker-icon-png-transparent.png"
+       alt="Construction Worker Icon"
+       style="width:200px"/>
+</div>
