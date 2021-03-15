@@ -229,5 +229,15 @@ std::vector<double> PIDController6DOF::update(std::vector<double> &set_pt, std::
 
 }
 
+std::vector<double> PIDController6DOF::update(std::vector<double> &set_pt, std::vector<double> &process_pt, double dt){
+    
+    std::vector<double> cmds;
+    std::chrono::duration<double> _dt(dt);
+    cmds = this->update(set_pt, process_pt, _dt);
+    return(cmds);
+
+}
+
+
 PIDController6DOF::~PIDController6DOF(){}
 

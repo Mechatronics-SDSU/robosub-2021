@@ -1,12 +1,17 @@
-//  Define a generic 6 DOF PID controller for Euler coordinate systems (i.e. roll, pitch, yaw, x, y, z).
-//
-#pragma once
-#include <ignition/math/PID.hh>
-#include <ignition/math/Angle.hh>
+/*  File: PIDController6DOF.i */
 
+%include "std_vector.i"
 
-//Generic collection of PID controllers for roll, pitch, yaw, x, y, z. Gives usesful setter function for maintaing
-//pid parameters.
+%module PIDController6DOF_py
+%{
+
+    #include "PIDController6DOF.hh"
+%}
+
+namespace std {
+    %template(IntVector) vector<int>;
+    %template(DoubleVector) vector<double>;
+}
 class PIDController6DOF{
     
     public:
@@ -59,7 +64,6 @@ class PIDController6DOF{
         void print_limits();
         
         //  run an update step for the PID controller.
-        std::vector<double> update(std::vector<double> &set_pt, std::vector<double> &process_pt, const std::chrono::duration< double > &dt); 
     
 
         std::vector<double> update(std::vector<double> &set_pt, std::vector<double> &process_pt, double dt);
