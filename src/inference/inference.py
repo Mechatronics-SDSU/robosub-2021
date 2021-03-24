@@ -8,54 +8,18 @@ Ian Reichard
 Luka Jozic
 """
 
-import cv2
-import numpy as np
+# Python
 import os
 import sys
 import time
-from threading import Thread
 import importlib.util
 
+# External
+import cv2
+import numpy as np
 
-class VideoStream:
-    """Camera object that controls video streaming from the Picamera"""
-    def __init__(self, resolution=(640, 480), framerate=10):
-        # Initializes camera
-        self.stream = cv2.VideoCapture(0)
-        ret = self.stream.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-        ret = self.stream.set(3, resolution[0])
-        ret = self.stream.set(4, resolution[1])
-
-        # Read first frame from the stream
-        (self.grabbed, self.frame) = self.stream.read()
-
-        # Variable to control when the camera is stopped
-        self.stopped = False
-
-    def start(self):
-        """Start the thread that reads frames from the video stream"""
-        Thread(target=self.update, args=()).start()
-        return self
-
-    def update(self):
-        """Keep looping indefinitely until the thread is stopped"""
-        while True:
-            # If the camera is stopped, stop the thread
-            if self.stopped:
-                # Close camera resources
-                self.stream.release()
-                return
-
-            # Otherwise, grab the next frame from the stream
-            (self.grabbed, self.frame) = self.stream.read()
-
-    def read(self):
-        """Return the most recent frame"""
-        return self.frame
-
-    def stop(self):
-        """Indicate that the camera and thread should be stopped"""
-        self.stopped = True
+# src
+from video_stream import VideoStream
 
 
 def main():
@@ -68,7 +32,7 @@ def webcam_detection():
     """Modifying Luka's webcam detection code a bit and putting it here"""
 
     # Placing these here so we don't have to pass args each time we run file.
-    model_dir = 'model'
+    model_dir = 'inference\\model'
     model_graph = 'detect.tflite'
     model_labels = 'labelmap.txt'
     model_thresh = float(0.2)
@@ -81,7 +45,7 @@ def webcam_detection():
     if importlib.util.find_spec('tflite_runtime'):
         from tflite_runtime.interpreter import Interpreter
         if use_tpu:
-            from tflite_runtime.interpreter import load_delegate
+            pass
     else:
         print('No tflite runtime!')
         sys.exit()
@@ -129,7 +93,7 @@ def webcam_detection():
     freq = cv2.getTickFrequency()
 
     # Get video stream using VideoStream class
-    videostream = VideoStream(resolution=(img_width, img_height), framerate=30).start()  # Maybe change this framerate call?
+    videostream = VideoStream(resolution=(img_width, img_height)).start()  # Maybe change this framerate call?
     time.sleep(1)
     term_criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)
 
@@ -163,7 +127,6 @@ def webcam_detection():
         # Swap from meanshift to tflite detection if tf_swap_delay has elapsed
         if (timer_tf_t2 - timer_tf_t1) / freq > tf_swap_delay:
             timer_tf_t1 = cv2.getTickCount()
-            print('Time: ', (timer_tf_t2 - timer_tf_t1)/freq)
 
             # Perform tflite object detection
             interpreter.set_tensor(input_details[0]['index'], input_data)
@@ -174,8 +137,8 @@ def webcam_detection():
                 0]  # Bounding box coordinates of detected objects
             classes = interpreter.get_tensor(output_details[1]['index'])[0]  # Class index of detected objects
             scores = interpreter.get_tensor(output_details[2]['index'])[0]  # Confidence of detected objects
-            print('Classes: ' + str(len(classes)))
-            print('Labels: ' + str(len(labels)))
+            # print('Classes: ' + str(len(classes)))
+            # print('Labels: ' + str(len(labels)))
             # num = interpreter.get_tensor(output_details[3]['index'])[0]  # Total number of detected objects (inaccurate and not needed)
 
             # Loop over all detections and draw detection box if confidence is above minimum threshold
