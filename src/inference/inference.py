@@ -1,5 +1,5 @@
 """
-Inference System Entry Point
+Inference System's model code for initial object detection.
 
 Requires a Conda enviornment to install tflite.
 
