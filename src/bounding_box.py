@@ -36,9 +36,9 @@ class Box:
         :return:[x_left, y_top, x_right, y_bottom]
         """
         if self.lower-self.height < 0:
-            return [self.upper, self.upper+self.width, self.lower-self.height, self.lower]
+            return [self.upper, self.lower-self.height, self.upper+self.width, self.lower]
         else:
-            return [self.upper, self.upper + self.width, 0, self.lower]
+            return [self.upper, 0, self.upper + self.width, self.lower]
 
     def get_area(self):
         """
