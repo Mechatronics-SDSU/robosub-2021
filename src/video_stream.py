@@ -29,6 +29,8 @@ class VideoStream:
         Camera is -1 or 0 if there is only 1 camera installed.
         Having additional camera(s) means this needs to be modified to select a different camera.
         """
+        self.width = resolution[0]
+        self.height = resolution[1]
 
         # Force the video encoder based on system. Should only be V4L2 in production.
         self.encoder = 0
@@ -96,6 +98,14 @@ class VideoStream:
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame = cv2.resize(frame, (640, 480))
         cv2.imshow('img', frame)
+
+    def get_width(self):
+        """Getter"""
+        return self.width
+
+    def get_height(self):
+        """Getter"""
+        return self.height
 
 
 if __name__ == '__main__':

@@ -9,6 +9,7 @@ Contributers:
 def main(box):
     """Main function"""
     print('Hello World!')
+    return box
 
 
 if __name__ != '__main__':

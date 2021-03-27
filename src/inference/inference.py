@@ -20,15 +20,15 @@ import numpy as np
 
 # src
 from video_stream import VideoStream
+from bounding_box import Box
 
 
-def main():
+def main(vs, tracking):
     """Main function"""
-    # print("Hello from ian_dev branch!")
-    webcam_detection()
+    webcam_detection(vs, tracking)
 
 
-def webcam_detection():
+def webcam_detection(vs, tracking):
     """Modifying Luka's webcam detection code a bit and putting it here"""
 
     # Placing these here so we don't have to pass args each time we run file.
@@ -93,7 +93,7 @@ def webcam_detection():
     freq = cv2.getTickFrequency()
 
     # Get video stream using VideoStream class
-    videostream = VideoStream(resolution=(img_width, img_height)).start()  # Maybe change this framerate call?
+    # videostream = VideoStream(resolution=(img_width, img_height)).start()  # Maybe change this framerate call?
     time.sleep(1)
     term_criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)
 
@@ -112,7 +112,7 @@ def webcam_detection():
         timer_fps_t1 = cv2.getTickCount()
 
         # Get frames from video stream
-        frame_original = videostream.read()
+        frame_original = vs.read()
 
         # Resize
         frame = frame_original.copy()
@@ -164,8 +164,8 @@ def webcam_detection():
                                   cv2.FILLED)  # Draw white box to put label text in
                     cv2.putText(frame, label, (xmin, label_ymin - 7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0),
                                 2)  # Draw label text
-                    if object_name == 'cell phone':
-                        object_to_track = 'cell phone'
+                    if object_name == tracking[0]:
+                        object_to_track = tracking[0]
                         x_min, y_min, x_max, y_max = xmin, ymin, xmax, ymax
 
         # Perform Mean Shift in the 'in between' frames where we aren't doing tflite
@@ -197,10 +197,11 @@ def webcam_detection():
         # 'q' to quit
         if cv2.waitKey(1) == ord('q'):
             break
+    return Box(vs.get_width, vs.get_height, x_min, y_max)
 
 
-if __name__ == '__main__':
+if __name__ != '__main__':
     main()
 else:
-    print('Inference is being imported, should only be used for testing!')
-    main()
+    print('Import me!')
+    sys.exit()
