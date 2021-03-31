@@ -28,7 +28,7 @@ def main(vs, tracking):
     webcam_detection(vs, tracking)
 
 
-def webcam_detection(vs, tracking):
+def webcam_detection(vs, tracking='cell_phone'):
     """Modifying Luka's webcam detection code a bit and putting it here"""
 
     # Placing these here so we don't have to pass args each time we run file.
@@ -112,6 +112,7 @@ def webcam_detection(vs, tracking):
         timer_fps_t1 = cv2.getTickCount()
 
         # Get frames from video stream
+        vs.start()
         frame_original = vs.read()
 
         # Resize
@@ -157,33 +158,17 @@ def webcam_detection(vs, tracking):
                     # Draw label
                     object_name = labels[int(classes[i])]  # Look up object name from "labels" array using class index
                     label = '%s: %d%%' % (object_name, int(scores[i] * 100))  # Example: 'person: 72%'
-                    labelSize, baseLine = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)  # Get font size
-                    label_ymin = max(ymin, labelSize[1] + 10)  # Make sure not to draw label too close to top of window
-                    cv2.rectangle(frame, (xmin, label_ymin - labelSize[1] - 10),
-                                  (xmin + labelSize[0], label_ymin + baseLine - 10), (255, 255, 255),
+                    labelsize, baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)  # Get font size
+                    label_ymin = max(ymin, labelsize[1] + 10)  # Make sure not to draw label too close to top of window
+                    cv2.rectangle(frame, (xmin, label_ymin - labelsize[1] - 10),
+                                  (xmin + labelsize[0], label_ymin + baseline - 10), (255, 255, 255),
                                   cv2.FILLED)  # Draw white box to put label text in
                     cv2.putText(frame, label, (xmin, label_ymin - 7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0),
                                 2)  # Draw label text
                     if object_name == tracking[0]:
                         object_to_track = tracking[0]
                         x_min, y_min, x_max, y_max = xmin, ymin, xmax, ymax
-
-        # Perform Mean Shift in the 'in between' frames where we aren't doing tflite
-        # TODO change from cell phone specifically to other objects? -Ian
-        if object_tracking == 'cell phone':
-            roi = frame[y_min:y_max, x_min:x_max]
-            hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-            roi_hist = cv2.calcHist([hsv_roi], [0], None, [180], [0, 180])  # I don't know what these values are for. Luka pls comment.
-            roi_hist = cv2.normalize(roi_hist, roi_hist, 0, 255, cv2.NORM_MINMAX)
-            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-            mask = cv2.calcBackProject([hsv], [0], roi_hist, [0, 180], 1)
-
-            # Mean shift and get new tracking rectangle
-            _, track_window = cv2.meanShift(mask, (x_min, y_min, x_max-x_min, y_max-y_min), term_criteria)
-            x, y, w, h = track_window
-            # Draw green rectangle
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
+        # 3/30/2021 Refactor: Meanshift no longer in this file -IAR
         # Draw FPS
         cv2.putText(frame, 'FPS: {0:.2f}'.format(fps_calc), (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2, cv2.LINE_AA)
         # Display Frame
@@ -201,7 +186,7 @@ def webcam_detection(vs, tracking):
 
 
 if __name__ != '__main__':
-    main()
+    main(vs=VideoStream(), tracking='cell_phone')
 else:
     print('Import me!')
     sys.exit()

@@ -7,13 +7,15 @@ Luka Jozic
 """
 
 # Python
-
 import sys
 import platform
 from threading import Thread
 
 # External
 import cv2
+
+# src
+from bounding_box import Box
 
 
 class VideoStream:
@@ -85,7 +87,7 @@ class VideoStream:
             (self.grabbed, self.frame) = self.stream.read()
 
     def read(self):
-        """Return the most recent frame"""
+        """Return the frame"""
         return self.frame
 
     def stop(self):
@@ -93,11 +95,22 @@ class VideoStream:
         self.stopped = True
 
     def show(self):
-        """Shows a video feed. Debugging only."""
+        """Shows stream, should be for debugging only"""
         frame = self.read()
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame = cv2.resize(frame, (640, 480))
         cv2.imshow('img', frame)
+
+    def show_from_box(self, box):
+        """Shows stream from bounding box"""
+        while True:
+            _, frame = self.stream.read()
+            frame_copy = frame
+            coords = box.get_coordinates()
+            frame_copy = frame_copy[coords[1]:coords[3], coords[0]:coords[2]]
+            cv2.imshow('img', frame_copy)
+            if cv2.waitKey(1) == ord('q'):
+                break
 
     def get_width(self):
         """Getter"""
@@ -111,3 +124,5 @@ class VideoStream:
 if __name__ == '__main__':
     print("Please import me!")
     sys.exit()
+else:
+    print("VideoStream class initialized!")

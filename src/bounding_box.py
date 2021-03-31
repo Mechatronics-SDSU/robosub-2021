@@ -6,6 +6,7 @@ Ian Reichard
 """
 
 import sys
+import math
 
 
 class Box:
@@ -13,18 +14,23 @@ class Box:
     Properties of the rectangle's bounding box.
     """
 
-    def __init__(self, w, h, x_top, y_bot):
+    def __init__(self, x_top, y_top, x_bot, y_bot):
         """
-        :param w: The box's width
-        :param h: The box's height
-        :param x_top: The box's upper left x coordinate.
+        :param x_top: The box's top left x coordinate.
+        :param y_top: The box's top left y coordinate.
+        :param x_bot: The box's bottom right x coordinate.
         :param y_bot: The box's bottom right y coordinate.
         """
-
-        self.width = w
-        self.height = h
-        self.upper = x_top
-        self.lower = y_bot
+        self.upper_x = x_top
+        self.upper_y = y_top
+        self.lower_x = x_bot
+        self.lower_y = y_bot
+        self.width = math.floor(math.fabs(self.lower_x - self.upper_x))
+        if self.width < 0:
+            self.width = 0
+        self.height = math.floor(math.fabs(self.lower_y - self.upper_y))
+        if self.height < 0:
+            self.height = 0
 
     def get_coordinates(self):
         """
@@ -35,10 +41,7 @@ class Box:
                             |_______X (Second coordinate)
         :return:[x_left, y_top, x_right, y_bottom]
         """
-        if self.lower-self.height < 0:
-            return [self.upper, self.lower-self.height, self.upper + self.width, self.lower]
-        else:
-            return [self.upper, 0, self.upper + self.width, self.lower]
+        return [self.upper_x, self.upper_y, self.lower_x, self.lower_y]
 
     def get_area(self):
         """
