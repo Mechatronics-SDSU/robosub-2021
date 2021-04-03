@@ -23,19 +23,19 @@ from video_stream import VideoStream
 from bounding_box import Box
 
 
-def main(vs, tracking):
+def main(vs, tracking, demo):
     """Main function"""
-    webcam_detection(vs, tracking)
+    return webcam_detection(vs, tracking, demo)
 
 
-def webcam_detection(vs, tracking='cell_phone'):
+def webcam_detection(vs, tracking_='cell phone', demo=False):
     """Modifying Luka's webcam detection code a bit and putting it here"""
 
     # Placing these here so we don't have to pass args each time we run file.
     model_dir = 'inference\\model'
     model_graph = 'detect.tflite'
     model_labels = 'labelmap.txt'
-    model_thresh = float(0.2)
+    model_thresh = float(0.5)
     camera_resolution = '1280x720'
     use_tpu = 'store_true'
     res_width, res_height = camera_resolution.split('x')
@@ -69,11 +69,7 @@ def webcam_detection(vs, tracking='cell_phone'):
         del (labels[0])
 
     # Load model
-    if use_tpu:
-        interpreter = Interpreter(model_path=path_graph)
-        # experimental_delegates=[load_delegate('libedgetpu.so.1.0')])
-    else:
-        interpreter = Interpreter(model_path=path_graph)
+    interpreter = Interpreter(model_path=path_graph)
     print('Loaded model at ' + path_graph)
     interpreter.allocate_tensors()
 
@@ -88,26 +84,12 @@ def webcam_detection(vs, tracking='cell_phone'):
     input_mean = 127.5
     input_std = 127.5
 
-    # FPS calculation
-    fps_calc = 1  # Set to 1 for first frame, just to have something
-    freq = cv2.getTickFrequency()
-
-    # Get video stream using VideoStream class
-    # videostream = VideoStream(resolution=(img_width, img_height)).start()  # Maybe change this framerate call?
-    time.sleep(1)
-    term_criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)
-
     # Tracking box bounds
     object_tracking, y_min, y_max, x_min, x_max = '', 0, 0, 0, 0
+    b = [0, 0, 0, 0]
+    tracking = True
 
-    # Time in seconds to wait until tflite model is run again. This will run meanshift in the meantime.
-    tf_swap_delay = 2
-
-    # Timers
-    timer_tf_t1 = cv2.getTickCount()
-    timer_tf_t2 = 0
-
-    while True:
+    while tracking:
         # Calculate FPS delta by measuring time 1 at start of while loop
         timer_fps_t1 = cv2.getTickCount()
 
@@ -125,38 +107,33 @@ def webcam_detection(vs, tracking='cell_phone'):
         if floating_model:
             input_data = (np.float32(input_data) - input_mean) / input_std
 
-        # Swap from meanshift to tflite detection if tf_swap_delay has elapsed
-        if (timer_tf_t2 - timer_tf_t1) / freq > tf_swap_delay:
-            timer_tf_t1 = cv2.getTickCount()
+        # Perform tflite object detection
+        interpreter.set_tensor(input_details[0]['index'], input_data)
+        interpreter.invoke()
 
-            # Perform tflite object detection
-            interpreter.set_tensor(input_details[0]['index'], input_data)
-            interpreter.invoke()
+        # Retrieve detection results
+        boxes = interpreter.get_tensor(output_details[0]['index'])[0]  # Bounding box coordinates of detected objects
+        classes = interpreter.get_tensor(output_details[1]['index'])[0]  # Class index of detected objects
+        scores = interpreter.get_tensor(output_details[2]['index'])[0]  # Confidence of detected objects
+        print('Scores: ' + str(scores))
 
-            # Retrieve detection results
-            boxes = interpreter.get_tensor(output_details[0]['index'])[
-                0]  # Bounding box coordinates of detected objects
-            classes = interpreter.get_tensor(output_details[1]['index'])[0]  # Class index of detected objects
-            scores = interpreter.get_tensor(output_details[2]['index'])[0]  # Confidence of detected objects
-            # print('Classes: ' + str(len(classes)))
-            # print('Labels: ' + str(len(labels)))
-            # num = interpreter.get_tensor(output_details[3]['index'])[0]  # Total number of detected objects (inaccurate and not needed)
+        # Loop over all detections and draw detection box if confidence is above minimum threshold
+        for i in range(len(scores)):
+            # Check to see if this is the object we're tracking
+            if (scores[i] > model_thresh) and (scores[i] <= 1.0) and (labels[int(classes[i])] == tracking_):
 
-            # Loop over all detections and draw detection box if confidence is above minimum threshold
-            for i in range(len(scores)):
-                if (scores[i] > model_thresh) and (scores[i] <= 1.0):
+                if demo:  # For running the demo, show the bounding box
                     # Get bounding box coordinates and draw box
                     # Interpreter can return coordinates that are outside of image dimensions, need to force them to be within image using max() and min()
                     ymin = int(max(1, (boxes[i][0] * img_height)))
                     xmin = int(max(1, (boxes[i][1] * img_width)))
                     ymax = int(min(img_height, (boxes[i][2] * img_height)))
                     xmax = int(min(img_width, (boxes[i][3] * img_width)))
-                    # print((xmin, ymin), ", ", (xmax, ymax))
 
                     cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (10, 255, 0), 2)
-
                     # Draw label
                     object_name = labels[int(classes[i])]  # Look up object name from "labels" array using class index
+                    print(object_name)
                     label = '%s: %d%%' % (object_name, int(scores[i] * 100))  # Example: 'person: 72%'
                     labelsize, baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)  # Get font size
                     label_ymin = max(ymin, labelsize[1] + 10)  # Make sure not to draw label too close to top of window
@@ -165,28 +142,35 @@ def webcam_detection(vs, tracking='cell_phone'):
                                   cv2.FILLED)  # Draw white box to put label text in
                     cv2.putText(frame, label, (xmin, label_ymin - 7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0),
                                 2)  # Draw label text
-                    if object_name == tracking[0]:
-                        object_to_track = tracking[0]
-                        x_min, y_min, x_max, y_max = xmin, ymin, xmax, ymax
-        # 3/30/2021 Refactor: Meanshift no longer in this file -IAR
-        # Draw FPS
-        cv2.putText(frame, 'FPS: {0:.2f}'.format(fps_calc), (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2, cv2.LINE_AA)
-        # Display Frame
-        cv2.imshow('Object detector', frame)
+                    b = [xmin, ymin, xmax, ymax]
+                    tracking = False
+                    break
 
-        # Calculate framerate after everything is done this loop
-        timer_tf_t2, timer_fps_t2 = cv2.getTickCount(), cv2.getTickCount()
-        time_fps = (timer_fps_t2 - timer_fps_t1) / freq
-        fps_calc = 1 / time_fps
+                else:  # Otherwise just return the box and end function call
+                    ymin = int(max(1, (boxes[i][0] * img_height)))
+                    xmin = int(max(1, (boxes[i][1] * img_width)))
+                    ymax = int(min(img_height, (boxes[i][2] * img_height)))
+                    xmax = int(min(img_width, (boxes[i][3] * img_width)))
+                    b = [xmin, ymin, xmax, ymax]
+                    tracking = False
+                    break
+
+        # 3/30/2021 Refactor: Meanshift no longer in this file -IAR
+        # cv2.imshow('Object detector', frame)  # Show frame for demo
 
         # 'q' to quit
         if cv2.waitKey(1) == ord('q'):
             break
-    return Box(vs.get_width, vs.get_height, x_min, y_max)
+
+    print(b)
+    return b
 
 
+# Entry point
+'''
 if __name__ != '__main__':
-    main(vs=VideoStream(), tracking='cell_phone')
+    main(vs=VideoStream(), tracking='cell phone', demo=True)
 else:
     print('Import me!')
     sys.exit()
+'''

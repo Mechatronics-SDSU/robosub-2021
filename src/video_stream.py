@@ -21,7 +21,7 @@ from bounding_box import Box
 class VideoStream:
     """Camera object that controls video streaming from the Pi's camera"""
 
-    def __init__(self, resolution=(640, 480), fps=30, camera=0):
+    def __init__(self, resolution=(1280, 720), fps=30, camera=0):
         """Initializes camera and the camera image stream
 
         Resolution is a tuple of width x and height y in the format (x,y)
@@ -98,8 +98,9 @@ class VideoStream:
         """Shows stream, should be for debugging only"""
         frame = self.read()
         # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame = cv2.resize(frame, (640, 480))
+        # frame = cv2.resize(frame, (640, 480))
         cv2.imshow('img', frame)
+        cv2.waitKey(1)
 
     def show_from_box(self, box):
         """Shows stream from bounding box"""
