@@ -20,7 +20,7 @@ def SERVER():
     		pb_message = msg_pb2.Boring()
     		pb_message.ParseFromString(message)
     		
-    		print(f"[{time.time()}]: " + pb_message.cont)
+    		print(f"[{time.asctime(time.localtime())}]: " + pb_message.cont)
     		
     
     try:
