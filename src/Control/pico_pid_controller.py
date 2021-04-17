@@ -4,6 +4,7 @@ from state_estimator import State_Estimator
 from maestro_driver import Maestro_Driver
 import numpy as np
 import time
+import matplotlib.pyplot as plt
 
 #Create a "positional" pid control system for the PICO mini auv. There will be 5 controller for
 #(roll, pitch, yaw, x, z). These are the DOFs controllable by the actuator.
@@ -93,22 +94,29 @@ if __name__ == "__main__":
 
     controller = Pico_PID_Controller()
     
-    controller.z_pid.set_gains(5.0, 0.0, 0.0)
+    controller.z_pid.set_gains(3.0, 0.0, 5.0)
     controller.z_pid.cmd_offset = -15.0
-    controller.z_pid.cmd_min = -16.0
-    controller.z_pid.cmd_max = 0.0
+    controller.z_pid.cmd_min = -18.0
+    controller.z_pid.cmd_max = -8.0
+
+    controller.roll_pid.set_gains(1.0, 0.0, 0.1)
+    controller.roll_pid.cmd_max
+    controller.roll_pid.cmd_min
+
+    controller.pitch_pid.set_gains(1.0, 0.0, 0.1)
 
     state_estimator.start()
+    
 
     while(True):
-        
+            
         #Get the state of the vehicle
         curr_state = state_estimator.state
 
         thrusts, errors = controller.update(desired_state, curr_state, dt)
 
         maestro_driver.set_thrusts(thrusts)
-
+        
         time.sleep(dt)
 
 
