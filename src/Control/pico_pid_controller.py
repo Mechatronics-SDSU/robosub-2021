@@ -103,7 +103,7 @@ if __name__ == "__main__":
     desired_depth = 1.0 #1.0m depth
     desired_roll = 0.0 #rad
     desired_pitch = 0.0 #rad
-    desired_yaw = 0.57 #rad
+    desired_yaw = 3.14 #rad
 
     #desired state for the control system to reach
     desired_state = np.zeros(12)
