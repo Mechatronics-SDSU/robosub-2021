@@ -2,7 +2,5 @@
 
 ## Contents
 
-- [helloworld.proto]
-  - The simple example used in the overview.
-- [route_guide.proto]
-  - An example service described in detail in the tutorial.
+- [startstream.proto]
+  - a sample protobuf built specifically for this module (more specific protos to be built as issues in git)
