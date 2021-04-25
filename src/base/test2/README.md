@@ -22,7 +22,7 @@ In this project, I'll explore live streaming over the network with UDP and Unix 
 
 ### Image Frame Packaging
 
-Explore the `testing/sender.py` file.
+Explore the `beta_testing/sender.py` file.
 
 The implementation are two steps. OpenCV library is being used to obtain image from wecam in `main()`, then passing `frame` into the `FrameSegment()` class to break down the frame and send over UDP. 
 
@@ -97,7 +97,7 @@ class FrameSegment(object):
 
 ### Image Frame Decode
 
-Explore the `testing/receiver.py` file.
+Explore the `beta_testing/receiver.py` file.
 The logic on the receiver's end is simple. It is to reverse the process of the sender:
 - Make sure to buffer out the current frame to make sure we are not starting in the middle of the segment stream.
 - Gather and concate all data segments (using the segment number for logic).
