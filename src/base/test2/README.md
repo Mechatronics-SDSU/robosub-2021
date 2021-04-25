@@ -8,7 +8,7 @@ Another famous network protocol is UDP or User Datagram Protocol. The implementa
 
 Though User Datagram Protocol is very fast, running user datagram protocol with IP packets on a internal network adds unnecessary overhead. We can solve this problem by using the smaller Unix Socket [3] So instead of UDP/IP, we'll be using UDP/Unix
 
-In this project, I'll explore live streaming over the network with UDP and Unix Sockets and control their destination using a gRPC service. 
+In this example, I'll explore live streaming over the network with UDP and Unix Sockets and control their destination using a gRPC service. 
 
 ### Pre-requisite
 - Python3
@@ -59,8 +59,7 @@ After the raw frame is compressed, implementing `numpy`'s `tostring()` feature t
 
 To determine the number of segments, I am using math.ceiling to round up the quotient of **bytearray_size/MAX_IMAGE_DGRAM**
 
-In this simple implementation, I use the first byte for current segment number which serves as a simple flag for the receiver to know whether there are still more segments of the image data coming or not. If the segment number is 1, this is the last data segment. Others are welcomed to try other flag/checksum method for more reliable check (for example: if a packet is dropped/never arrived, how the logic being handled?)
-
+In this simple implementation, I use the first byte for current segment number which serves as a simple flag for the receiver to know whether there are still more segments of the image data coming or not. If the segment number is 1, this is the last data segment. 
 ```
 class FrameSegment(object):
     """ 
