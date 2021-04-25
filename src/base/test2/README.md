@@ -8,7 +8,7 @@ Another famous network protocol is UDP or User Datagram Protocol. The implementa
 
 Though User Datagram Protocol is very fast, running user datagram protocol with IP packets on a internal network adds unnecessary overhead. We can solve this problem by using the smaller Unix Socket [3] So instead of UDP/IP, we'll be using UDP/Unix
 
-In this project, I'll explore live streaming over the network with UDP and Unix Sockets and control their destination using a gRPC service. 
+In this example, I'll explore live streaming over the network with UDP and Unix Sockets and control their destination using a gRPC service. 
 
 ### Pre-requisite
 - Python3
