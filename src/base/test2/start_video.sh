@@ -1,3 +1,3 @@
 rm /sock/test.sock
-$(`pwd`/testing/sender.py)&
-`pwd`/testing/receiver.py
+$(`pwd`/beta_testing/sender.py)&
+`pwd`/beta_testing/receiver.py

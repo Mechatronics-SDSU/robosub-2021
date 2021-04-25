@@ -9,9 +9,6 @@ cascPath = "./haarcascade_frontalface_default.xml"
 faceCascade = cv2.CascadeClassifier(cascPath)
 
 
-
-
-
 class FrameSegment(object):
     """ 
     Object to break down image frame segment
