@@ -4,23 +4,10 @@ import cv2
 import numpy as np
 import socket
 import struct
-import grpc
 
-from concurrent import futures
-
-import startstream_pb2_grpc
-import startstream_pb2
 import threading
 
 MAX_DGRAM = 2**16
-
-
-class CommandInterpreterService(startstream_pb2_grpc.CommandInterpreterServicer):
-    def GiveCommand(self, request, context):
-        if request.name == "unix_video":
-            vid = threading.Thread(target=initiate_unix_video,)
-            vid.start()
-        return startstream_pb2.CommandAck(message="ok: <{}>".format(request.name))
 
 def dump_buffer(s):
     """ Emptying buffer frame """
@@ -31,23 +18,30 @@ def dump_buffer(s):
             print("finish emptying buffer")
             break
 
-def server():
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    startstream_pb2_grpc.add_CommandInterpreterServicer_to_server(CommandInterpreterService(), server)
-    server.add_insecure_port('unix:///sock/test.sock')
-    server.start()
-    server.wait_for_termination()
+#class VideoStreamResponseThread(threading.Thread):
+#    def __init__(self):
+#        threading.Thread.__init__(self)
+#        #self.daemon = True
+#        self.loopflag = True
+#    def kill(self):
+#        self.loopflag = False
+#        return 0
 
-def initiate_unix_video():
+#def run(self):
+def video_stream_response_process():
+
     """ Getting image udp frame &
     concate before decode and output image """
     
     # Set up socket
+    
     s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-    s.bind("/sock/test.sock")
+    #s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind("/sock/video.sock")
     dat = b''
     dump_buffer(s)
-
+    
+    
     while True:
         seg, addr = s.recvfrom(MAX_DGRAM)
         if struct.unpack("B", seg[0:1])[0] > 1:
@@ -59,10 +53,9 @@ def initiate_unix_video():
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
             dat = b''
-
-    # cap.release()
-    cv2.destroyAllWindows()
     s.close()
+    cv2.destroyAllWindows()
+    print("done")
 
 if __name__ == "__main__":
-    server()
+    main()
