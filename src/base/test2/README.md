@@ -142,6 +142,24 @@ def main():
     cv2.destroyAllWindows()
     s.close()
 ```
+### Using grpc in a server environment
+
+#### Explore the `alpha_testing/server.py` file.
+The Logic is a combination of the `receiver.py` from the `beta_testing` folder, and
+a basic grpc server based on a server from the grpc github.
+- Launch The GRPC Server
+- if command from the GRPC client has been recieved parse possible options
+- initialize result
+- continue serving
+
+#### Explore the `alpha_testing/client.py` file.
+The Logic is a combination of the `receiver.py` from the `beta_testing` folder, and
+a basic grpc server based on a server from the grpc github.
+- Launch The GRPC client
+- send command to GRPC server
+- wait for confirmation
+- continue or quit
+
 
 ### Result
 - Seen During Workday ( or download an run with start_video.sh )
@@ -154,5 +172,5 @@ def main():
 
 
 ### TO-DOs:
-- Add protobufs and grpc service
 - Add to Docker Containers
+- Create Video
