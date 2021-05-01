@@ -172,5 +172,5 @@ a basic grpc server based on a server from the grpc github.
 
 
 ### TO-DOs:
-- Add to Docker Containers
-- Create Video
+- Make Multiple Versions
+- Create `Udate` Video
