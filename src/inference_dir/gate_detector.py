@@ -309,16 +309,3 @@ class GateDetector:
         return detected_tracking_boxes
 
 
-
-if __name__ == '__main__':
-    cap = cv2.VideoCapture('../files/gate_mission1.mp4')
-    gate_detector = GateDetector()
-    while True:
-        _, _frame = cap.read()
-        result = gate_detector.detect(_frame)
-
-        key = cv2.waitKey(30)
-        if key == 27:
-            break
-
-    cv2.destroyAllWindows()

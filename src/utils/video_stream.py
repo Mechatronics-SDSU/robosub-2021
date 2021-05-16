@@ -1,8 +1,6 @@
 import cv2
 from threading import Thread
 
-# Define VideoStream class to handle streaming of video from webcam in separate processing thread
-# Source - Adrian Rosebrock, PyImageSearch: https://www.pyimagesearch.com/2015/12/28/increasing-raspberry-pi-fps-with-python-and-opencv/
 class VideoStream:
     """Camera object that controls video streaming from the Picamera"""
 
