@@ -1,15 +1,11 @@
-import cv2
-from inference_dir.gate_detector import GateDetector
+from inference_dir.inference import Inference
 
-cap = cv2.VideoCapture('files/Additional_Test_Video.mp4')
-gate_detector = GateDetector()
 
-while True:
-    _, _frame = cap.read()
-    result = gate_detector.detect(_frame)
+video = 'files/gate_mission1.mp4'
+inference = Inference(video)  # Pass wither a video path or camera index
 
-    key = cv2.waitKey(30)
-    if key == 27:
-        break
+# inference.run_gate_detector()
+inference.run_object_detection(model_name='postmodel', objects=['post', 'cell phone'], tracking=True)
+# inference.run_object_detection(model_name='model', objects=['remote'], tracking=False)
 
-cv2.destroyAllWindows()
+

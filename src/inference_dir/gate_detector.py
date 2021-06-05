@@ -1,33 +1,7 @@
 import cv2
-import math
-from utils.debug import (draw_lines,
-                         draw_detected_tracking_boxes,
-                         print_tracking_box_class)
-
-BLUE = (255, 0, 0)
-GREEN = (0, 255, 0)
-RED = (0, 0, 255)
-WHITE = (255, 255, 255)
-
-MIN_VERT_LINE_DIFF = 50
-MIN_CORNER_DISTANCE = 60
-MIN_SLOPE = 45
-MIN_OVERLAP_PERCENTAGE = 75
-
-
-class TrackingBox:
-    def __init__(self, id, box, score):
-        self.id = [id]
-        self.box = box
-        self.score = [score]
-        self.distance = self.__get_estimated_distance_to_gate()
-
-    def __get_estimated_distance_to_gate(self):
-        """
-        :return: Estimated distance to the detected gate
-        """
-        gate_height = abs(self.box[3] - self.box[1])
-        return round(1000 / gate_height, 2)
+from utils.utils import (draw_lines, distance_between_points, DetectedObject)
+from utils.consants import (BLUE, GREEN, YELLOW, MIN_VERT_LINE_DIFF, MIN_CORNER_DISTANCE, MIN_SLOPE,
+                            MIN_OVERLAP_PERCENTAGE)
 
 
 class GateDetector:
@@ -82,11 +56,7 @@ class GateDetector:
 
         return [line1, line2] if min_diff < MIN_VERT_LINE_DIFF else None
 
-    def distance_between_points(self, x1, y1, x2, y2):
-        """
-        :return: Distance between the two given points
-        """
-        return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+
 
     def find_corner_lines(self, vertical_lines, horizontal_lines, hor_x_idx, hor_y_idx):
         """
@@ -111,8 +81,8 @@ class GateDetector:
                 if hor_y_idx == 2 and x2 - x1 > 5 or y2 > y1:
                     continue
 
-                current_distance = self.distance_between_points(x1, y1, x2, y2)
-                if current_distance < min_distance and current_distance < 50:
+                current_distance = distance_between_points((x1, y1), (x2, y2))
+                if current_distance < min_distance and current_distance < MIN_CORNER_DISTANCE:
                     min_vert = vert_line
                     min_hor = hor_line
                     min_distance = current_distance
@@ -130,18 +100,18 @@ class GateDetector:
         if left_corner[0] is None and right_corner[0] is None:
             return [], -1
         elif left_corner[0] is None and right_corner[0]:
-            return right_corner, 2
+            return right_corner, 'right-corner'
         elif right_corner[0] is None and left_corner[0]:
-            return left_corner, 1
+            return left_corner, 'left-corner'
 
         if left_corner[0][0] >= right_corner[0][0] or \
                 not self.horizontal_crossbar_aligned(left_corner[1], right_corner[1]):
             if left_diff < right_diff:
-                return left_corner, 1
+                return left_corner, 'left-corner'
             else:
-                return right_corner, 2
+                return right_corner, 'right-corner'
 
-        return left_corner + right_corner, 4
+        return left_corner + right_corner, 'full-gate'
 
     def horizontal_crossbar_aligned(self, left_crossbar, right_crossbar):
         """
@@ -168,25 +138,6 @@ class GateDetector:
         area_b = (XB2 - XB1) * (YB2 - YB1)
         overlap_percentage = area_of_intersection / min(area_a, area_b) * 100
         return overlap_percentage
-
-    def group_lines_into_rectangles(self, src, lines):
-        """
-        :param src: The frame or image to draw on
-        :param lines: A 2D array of horizontal lines
-        """
-        rectangles = []
-        for line in lines:
-            x1, y1, x2, y2 = line
-            y1 -= 15
-            y2 += 15
-            cv2.rectangle(src, (x1, y1), (x2, y2), BLUE, 2)
-            rectangles.append([x1, y1, x2, y2])
-
-        grouped_rectangles = cv2.groupRectangles(rectangles, 1, 1.2)
-
-        if len(grouped_rectangles[0]):
-            x1, y1, x2, y2 = grouped_rectangles[0][0]
-            cv2.rectangle(src, (x1, y1), (x2, y2), GREEN, 2)
 
     def get_box_coordinates(self, lines):
         """
@@ -240,7 +191,7 @@ class GateDetector:
         """
         detection_box = self.get_box_coordinates(lines)
         detection_score = self.get_detection_score(detection_id)
-        tracking_box = TrackingBox(detection_id, detection_box, detection_score)
+        tracking_box = DetectedObject(detection_id, detection_box, detection_score)
         return tracking_box
 
     def get_detection_score(self, detection_id):
@@ -248,12 +199,11 @@ class GateDetector:
         :param detection_id: Integer between 1-4 representing the detection shape
         :return: The corresponding score to that detection shape
         """
-        if detection_id == 3:
-            return 30
-        elif detection_id == 4:
-            return 50
-        return 10
-
+        if detection_id == 'two-posts':
+            return 70
+        elif detection_id == 'full-gate':
+            return 90
+        return 50
 
     def detect(self, _frame):
         """
@@ -261,10 +211,8 @@ class GateDetector:
         :param frame: Current frame to perform detection on
         :return: An array of all the found tracking box objects
         """
-        detected_tracking_boxes = []
         frame = cv2.medianBlur(_frame, 5)
-        frame = cv2.resize(frame, (800, 400)) # Only for making testing of different videos easier
-
+        # frame = cv2.resize(frame, (800, 400))  # Only for making testing of different videos easier
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         # Create default Fast Line Detector (FSD)
@@ -273,13 +221,13 @@ class GateDetector:
                                                   _canny_th2=5,
                                                   _canny_aperture_size=3,
                                                   _do_merge=True)
-
         # Detect lines in the image
         lines = fld.detect(gray_frame)
 
         # Draw detected lines in the image
         drawn_img = fld.drawSegments(gray_frame, lines)
 
+        detected_tracking_boxes = []
         if type(lines) is not type(None):
             vertical, horizontal = self.separate_lines(lines)
 
@@ -294,18 +242,13 @@ class GateDetector:
                                                                 right_corner_diff)
 
             if len(corner_lines):
-                draw_lines(frame, corner_lines, BLUE)
+                draw_lines(frame, corner_lines, YELLOW)
                 detected_tracking_boxes.append(self.create_tracking_box(corner_lines, shape_idx))
 
             if posts:
-                draw_lines(frame, posts, BLUE)
-                detected_tracking_boxes.append(self.create_tracking_box(posts, 3))
+                draw_lines(frame, posts, YELLOW)
+                detected_tracking_boxes.append(self.create_tracking_box(posts, 'two-posts'))
 
             detected_tracking_boxes = self.merge_similar_tracking_boxes(detected_tracking_boxes)
-            draw_detected_tracking_boxes(frame, detected_tracking_boxes, RED)
 
-        cv2.imshow("FLD", drawn_img)
-        cv2.imshow("Frame", frame)
         return detected_tracking_boxes
-
-
