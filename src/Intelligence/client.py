@@ -10,6 +10,7 @@ from inference_dir.gate_detector import GateDetector
 import server
 from multiprocessing import Process
 
+#a
 
 SERVER_ADDRESS = "localhost:23333"
 CLIENT_ID = 1
