@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+
+message Send_Request{
+	bytes send = 1;
+}
+
+message Request_Response{
+	bytes message = 2;
+}
+
+
+service Response_Service{
+	rpc Info (Send_Request) returns (Request_Response) {}
+}
