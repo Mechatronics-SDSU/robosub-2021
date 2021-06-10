@@ -24,8 +24,7 @@ def run():
 			stub = buffer_pb2_grpc.Response_ServiceStub(channel)
 			i = 0
 			p = Process(target=process, args=(cap,stub,i,))
-			if p.is_alive() == False:
-				server.check(p, "start")
+			server.check(p, "start")
 			print("Is p alive? ", p.is_alive())
 			if False:
 				server.check(p, "kill")
