@@ -8,7 +8,11 @@ import logging
 import pickle
 import os
 import client
+import socket
 
+HOST = '127.0.0.1'
+PORT = 65432
+SERVER_ADDRESS = "localhost:23333"
 
 class Listener(buffer_pb2_grpc.Response_ServiceServicer):
 	def Info(self, request, context):
@@ -20,12 +24,15 @@ class Listener(buffer_pb2_grpc.Response_ServiceServicer):
 
 def check(p, cmd):
 	if cmd == "start":
-		print("Process is good to start")
-		p.start()
-	if cmd == "kill":
+		with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+			s.bind((HOST,PORT))
+			s.listen()
+			s.sendall(p.start())
+	if cmd == "stop":
 		p.kill()
 	if cmd == "check":
 		print("Is p alive? ", p.is_alive())
+		
 			
 def serve():
 	server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
