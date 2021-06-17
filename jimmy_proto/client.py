@@ -31,10 +31,16 @@ def run():
 			i = 0
 			p = Process(target=process, args=(cap,stub,i,))
 			server.check(p, "start")
+<<<<<<< HEAD
 			with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 				s.connect((HOST, PORT))
 				print("Inside")
 				data = s.recv(1024)
+=======
+			print("Is p alive? ", p.is_alive())
+			if False:
+				server.check(p, "kill")
+>>>>>>> c858c832581ee3aa8e15f8d7064e905f4c22ae77
 		except:
 			print('waiting for server to connect...')
 			time.sleep(1)
