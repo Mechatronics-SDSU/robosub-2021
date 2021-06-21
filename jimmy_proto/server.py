@@ -8,7 +8,6 @@ import logging
 import pickle
 import os
 import cv2
-import client
 from inference_dir.gate_detector import GateDetector
 from multiprocessing import Process
 import socket
