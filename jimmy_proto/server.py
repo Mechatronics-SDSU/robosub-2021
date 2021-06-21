@@ -7,31 +7,51 @@ import threading
 import logging
 import pickle
 import os
+import cv2
 import client
+from inference_dir.gate_detector import GateDetector
+from multiprocessing import Process
 import socket
+
 
 HOST = '127.0.0.1'
 PORT = 65432
+
+
 SERVER_ADDRESS = "localhost:23333"
 
+
+gate_detector = GateDetector()
+cap = cv2.VideoCapture('files/Additional_Test_Video.mp4')
+
+
 class Listener(buffer_pb2_grpc.Response_ServiceServicer):
+	def __init__(self):
+		buffer_pb2_grpc.Response_ServiceServicer.__init__(self)
+		self.p = None
+		
+
 	def Info(self, request, context):
-		retriever = bytes(request.send)
-		val = pickle.loads(retriever)
-		print(val)
-		return buffer_pb2.Request_Response(message = bytes('Bytes Recieved: %s!' % request.send, 'utf-8'))
+		retriever = request.send
+		decode = retriever.decode("utf-8")
+		if  decode == "start":
+			self.p = Process(target=process, args=(cap,))
+			self.p.start()
+			return buffer_pb2.Request_Response(message = bytes('ok', 'utf-8'))
+		if request.send == "stop":
+			self.p.kill()
+			return buffer_pb2.Request_Response(message = bytes('ok', 'utf-8'))
 
 
-def check(p, cmd):
-	if cmd == "start":
+def process(cap,):
 		with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-			s.bind((HOST,PORT))
-			s.listen()
-			s.sendall(p.start())
-	if cmd == "stop":
-		p.kill()
-	if cmd == "check":
-		print("Is p alive? ", p.is_alive())
+			s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+			s.connect((HOST,PORT))
+			while True:
+				_, _frame = cap.read()
+				result = gate_detector.detect(_frame)
+				val = pickle.dumps(result)
+				s.sendall(val)
 		
 			
 def serve():

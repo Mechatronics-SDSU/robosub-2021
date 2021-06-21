@@ -16,8 +16,14 @@ CLIENT = docker.from_env()
 
 HOST = '127.0.0.1'
 PORT = 65432
+
+
 SERVER_ADDRESS = "localhost:23333"
+
+
 CLIENT_ID = 1
+start = False
+
 
 gate_detector = GateDetector()
 cap = cv2.VideoCapture('files/Additional_Test_Video.mp4')
@@ -25,6 +31,7 @@ tracking = {}
 
 
 def run():
+<<<<<<< HEAD
 	with grpc.insecure_channel('localhost:50051') as channel:
 		try:
 			stub = buffer_pb2_grpc.Response_ServiceStub(channel)
@@ -62,8 +69,36 @@ def process(cap,stub,i):
 			response = stub.Info(buffer_pb2.Send_Request(send=val))
 			tracking[i] = response.message
 			print(response.message)
+=======
+	channel = grpc.insecure_channel('localhost:50051')
+	stub = buffer_pb2_grpc.Response_ServiceStub(channel)
+	#try:
+	response_string = b"start"
+	stub.Info(buffer_pb2.Send_Request(send=response_string))
+		#response = self.stub.Info(buffer_pb2.Send_Request(req=b(request)))
+	term_socket()
+			
+	#except Exception as e:
+		#print('waiting for server to connect...')
+		#print(e)
+	time.sleep(1)
+>>>>>>> 376fe75a535040e3e1d710870debc8aa02a2206a
 
 
+def term_socket():
+	#val = pickle.dumps(thisdict)
+	#stub.Info(response.message)
+	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+		s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		s.bind((HOST, PORT))
+		s.listen(5)
+		conn, addr = s.accept()
+		while True:
+			data = conn.recvfrom(1024)[0]
+			print(data)
+		conn.close()
+			
+			
 def stop():
 	server.check(p, "stop")
 				
