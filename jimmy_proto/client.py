@@ -27,7 +27,7 @@ start = False
 gate_detector = GateDetector()
 cap = cv2.VideoCapture('files/Additional_Test_Video.mp4')
 tracking = {}
-
+#Jimmy is dope
 
 def run():
 	channel = grpc.insecure_channel('localhost:50051')

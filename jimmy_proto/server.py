@@ -15,7 +15,7 @@ import socket
 
 HOST = '127.0.0.1'
 PORT = 65432
-
+#jimmy is dope
 
 SERVER_ADDRESS = "localhost:23333"
 
