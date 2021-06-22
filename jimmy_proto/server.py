@@ -11,11 +11,13 @@ import cv2
 from inference_dir.gate_detector import GateDetector
 from multiprocessing import Process
 import socket
+import docker
+CLIENT = docker.from_env()
 
 
 HOST = '127.0.0.1'
 PORT = 65432
-#jimmy is dope
+
 
 SERVER_ADDRESS = "localhost:23333"
 
@@ -28,12 +30,24 @@ class Listener(buffer_pb2_grpc.Response_ServiceServicer):
 	def __init__(self):
 		buffer_pb2_grpc.Response_ServiceServicer.__init__(self)
 		self.p = None
-		
+		containers_list = CLIENT.containers.list(all=True)
+		if not containers_list != "server":
+			self.container = False
+		else:
+			self.container = True
+
 
 	def Info(self, request, context):
 		retriever = request.send
 		decode = retriever.decode("utf-8")
 		if  decode == "start":
+			if self.container == True:
+				containers_list = CLIENT.containers.list(all=True)
+				for cont in containers_list:
+			   		cont.remove(force=True)
+			   		self.container = False
+			if self.container == False:
+				CLIENT.containers.run(name="server", command=None, image="ubuntu", detach=True)
 			self.p = Process(target=process, args=(cap,))
 			self.p.start()
 			return buffer_pb2.Request_Response(message = bytes('ok', 'utf-8'))

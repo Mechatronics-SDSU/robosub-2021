@@ -27,15 +27,31 @@ start = False
 gate_detector = GateDetector()
 cap = cv2.VideoCapture('files/Additional_Test_Video.mp4')
 tracking = {}
-#Jimmy is dope
 
-def run():
-	channel = grpc.insecure_channel('localhost:50051')
-	stub = buffer_pb2_grpc.Response_ServiceStub(channel)
-	response_string = b"start"
-	stub.Info(buffer_pb2.Send_Request(send=response_string))
-	term_socket()
-			
+class Spawn():
+	def __init__(self):
+		containers_list = CLIENT.containers.list(all=True)
+		if not containers_list != "client":
+			self.container = False
+		else:
+			self.container = True
+		self.run()
+		
+		
+	def run(self):
+		channel = grpc.insecure_channel('localhost:50051')
+		stub = buffer_pb2_grpc.Response_ServiceStub(channel)
+		containers_list = CLIENT.containers.list(all=True)
+		if self.container == True:
+			for cont in containers_list:
+		   		cont.remove(force=True)
+		   		self.container = False
+		if self.container == False:
+			CLIENT.containers.run(name="client", command=None, image="ubuntu", detach=True)
+		response_string = b"start"
+		stub.Info(buffer_pb2.Send_Request(send=response_string))
+		term_socket()
+				
 
 def term_socket():
 	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -55,4 +71,4 @@ def stop():
    
 if __name__ == '__main__':
 	logging.basicConfig()
-	run()
+	Spawn()
