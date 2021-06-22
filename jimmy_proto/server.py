@@ -38,16 +38,16 @@ class Listener(buffer_pb2_grpc.Response_ServiceServicer):
 
 
 	def Info(self, request, context):
+		if self.container == True:
+			containers_list = CLIENT.containers.list(all=True)
+			for cont in containers_list:
+			   	cont.remove(force=True)
+			   	self.container = False
+		elif self.container == False:
+			CLIENT.containers.run(name="server", command=None, image="ubuntu", detach=True)
 		retriever = request.send
 		decode = retriever.decode("utf-8")
 		if  decode == "start":
-			if self.container == True:
-				containers_list = CLIENT.containers.list(all=True)
-				for cont in containers_list:
-			   		cont.remove(force=True)
-			   		self.container = False
-			if self.container == False:
-				CLIENT.containers.run(name="server", command=None, image="ubuntu", detach=True)
 			self.p = Process(target=process, args=(cap,))
 			self.p.start()
 			return buffer_pb2.Request_Response(message = bytes('ok', 'utf-8'))
