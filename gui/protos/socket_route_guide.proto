@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+// Simple RPC
+service SocketGRPC {
+  // Sends a setup request
+  rpc SendSocketRequest(MsgRequest) returns (MsgReply) {}
+}
+
+// Contains request to server to start unix socket
+message MsgRequest {
+  string req = 1;
+}
+
+// Contains acknowledge
+message MsgReply {
+  string ack = 1;
+}
