@@ -73,6 +73,7 @@ import cv2
 import socket_route_guide_pb2
 import socket_route_guide_pb2_grpc
 import src.utils.ip_config as ipc
+import src.utils.logger as sub_logging
 import src.utils.telemetry as sensor_tel
 
 # Command
@@ -104,6 +105,25 @@ def request_to_value(r):
             first = i
         elif r[i] == '\"' and first != -1:
             result = r[first+1:i]
+    return result
+
+
+def log_parse(input_data):
+    """Logs sometimes arrive in >1 at a time.
+    Parses them out and returns a list.
+    :return: List of all logs.
+    """
+    input_data = bytes.decode(input_data, encoding='utf-8')
+    result = []
+    s = ''
+    j = 0
+    for i in range(len(input_data)):
+        if (input_data[i] == '{') and (s == ''):
+            j = i
+            s = '{'
+        elif (input_data[i] == '}') and (s == '{'):
+            result.append(input_data[(j + 1):(i - 1)])
+            s = ''
     return result
 
 
@@ -164,7 +184,7 @@ class LoggerWrapper:
 
 
 class Window(tk.Frame):
-    """ Window class, handles the GUI's 'master' or 'root' window and all subwindows
+    """Window class, handles the GUI's 'master' or 'root' window and all subwindows
     """
     def __init__(self, master=None):
         # Load ports from config file or set to defaults
@@ -237,6 +257,7 @@ class Window(tk.Frame):
         self.logging_socket_connected_button = tk.Button(master=self.info_window, text='     ', bg='red')
         self.logging_socket_status_text = tk.Label(master=self.info_window, text='[LOG_SCK]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.logging_socket_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_logging_socket), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.remote_logging_queue = []
         # Telemetry Socket
         self.telemetry_socket_is_enabled = tk.BooleanVar(value=False)  # Enable
         self.telemetry_socket_enable_button = tk.Button(master=self.info_window, text='     ', bg='black')
@@ -258,6 +279,10 @@ class Window(tk.Frame):
         self.mission_config_string = tk.StringVar(value='None')  # Mission to do this run
         self.mission_config_text = tk.Label(master=self.info_window, text='[MISSION]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.mission_config_text_current = tk.Label(master=self.info_window, text='None', bd=0, anchor='w', bg='white', justify=tk.LEFT)
+
+        # Telemetry Window
+
+        # Controller Window
 
         # Data I/O to other processes
         self.in_pipe = None
@@ -516,7 +541,7 @@ class Window(tk.Frame):
         """Initializes logging socket connection from gui
         """
         if self.logging_socket_level.get() > 0:
-            self.out_pipe.send(('logging', 'gui', 'initialize_' + str(self.logging_socket_level.get())))
+            self.out_pipe.send(('logging', 'gui', 'initialize', default_hostname, self.port_logging_socket))
         else:
             self.diag_box('Logging socket is not enabled!')
 
@@ -541,6 +566,11 @@ class Window(tk.Frame):
         """
         if self.logger.queue.qsize() > 0:
             self.text.insert(END, self.logger.dequeue())
+            self.text.see('end')
+        if len(self.remote_logging_queue) > 0:
+            text = self.remote_logging_queue[0].strip() + '\n'
+            self.text.insert(END, text)
+            self.remote_logging_queue = self.remote_logging_queue[1:]
             self.text.see('end')
 
     @staticmethod
@@ -617,6 +647,11 @@ class Window(tk.Frame):
                         self.video_socket_is_connected = True
                     elif cmd[2] == 'no_conn_socket':
                         self.video_socket_is_connected = False
+                elif cmd[1] == 'logging':
+                    if cmd[2] == 'conn_socket':
+                        self.logging_socket_is_connected = True
+                    else:
+                        self.remote_logging_queue.append(cmd[2])
                 elif cmd[1] == 'telemetry':
                     if isinstance(cmd[2], str):
                         if cmd[2] == 'conn_socket':
@@ -636,6 +671,8 @@ class Window(tk.Frame):
         # Update all button statuses
         self.update_button(self.video_grpc_status_button, self.video_grpc_is_connected)
         self.update_button(self.video_socket_connected_button, self.video_socket_is_connected)
+        self.update_button(self.logging_socket_connected_button, self.logging_socket_is_connected)
+        self.update_button(self.telemetry_socket_connected_button, self.telemetry_socket_is_connected)
         self.update_button(self.config_status_button, self.config_is_set)
         self.update_button_enable(self.video_socket_enable_button, self.video_socket_is_enabled.get())
         self.update_button_enable(self.telemetry_socket_enable_button, self.telemetry_socket_is_enabled.get())
@@ -643,6 +680,7 @@ class Window(tk.Frame):
         self.update_button_int(self.logging_socket_enable_button, self.logging_socket_level.get())
         self.update_status_string(self.mission_config_text_current, self.mission_config_string.get())
         print(self.telemetry_current_state.sensors['accelerometer'])  # Print accel data to show it's in GUI
+
         # Check for pipe updates
         self.read_pipe()
         # Loop, does not recurse despite appearance
@@ -801,8 +839,32 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
 def logging_proc(logger, logging_pipe_in, logging_pipe_out):
     """Receives logs from Intelligence over TCP connection.
     """
+    hostname = ''
+    port = ''
+    started = False
     while True:
-        pass
+        conn = mp.connection.wait([logging_pipe_in], timeout=-1)
+        if len(conn) > 0:
+            result = conn[0].recv()
+            if result[2] == 'initialize':
+                hostname = result[3]
+                port = result[4]
+                started = True
+        if started:
+            lc = sub_logging.LoggerClient(save_logs=False)
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                s.connect((hostname, port))
+                logging_pipe_out.send(('gui', 'logging', 'conn_socket'))
+                while True:
+                    # TODO add a check for mp connection here
+                    data = s.recv(4096)
+                    # Parse logs
+                    log_list = log_parse(data)
+                    # Send to GUI
+                    for i in range(len(log_list)):
+                        lc.logging_queue.append(log_list[i])
+                        logging_pipe_out.send(('gui', 'logging', lc.dequeue()))
 
 
 def telemetry_proc(logger, telemetry_pipe_in, telemetry_pipe_out):
@@ -825,6 +887,7 @@ def telemetry_proc(logger, telemetry_pipe_in, telemetry_pipe_out):
                 s.connect((hostname, port))
                 telemetry_pipe_out.send(('gui', 'telemetry', 'conn_socket'))
                 while True:
+                    # TODO add a check for mp connection here
                     s.sendall(b'1')
                     data = s.recv(4096)
                     telemetry_pipe_out.send(('gui', 'telemetry', data))

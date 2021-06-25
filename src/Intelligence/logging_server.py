@@ -9,6 +9,7 @@ from multiprocessing import set_start_method, get_context
 import os
 import socket
 import logging
+import time
 
 from logger import LoggerServer
 
@@ -42,16 +43,19 @@ def main():
 
     # Demo of logger
     ls = LoggerServer(level=logging.DEBUG)
-    ls.log(prio=logging.DEBUG, subsystem='Intelligence', message='Test debug.')
-    ls.log(prio=logging.INFO, subsystem='Intelligence', message='Test info.')
-    ls.log(prio=logging.WARNING, subsystem='Intelligence', message='Test warning.')
-    ls.log(prio=logging.ERROR, subsystem='Intelligence', message='Test error.')
-    ls.log(prio=logging.CRITICAL, subsystem='Intelligence', message='Test critical.')
+    while True:
+        ls.log(prio=logging.DEBUG, subsystem='Intelligence', message='Test debug.')
+        ls.log(prio=logging.INFO, subsystem='Intelligence', message='Test info.')
+        ls.log(prio=logging.WARNING, subsystem='Intelligence', message='Test warning.')
+        ls.log(prio=logging.ERROR, subsystem='Intelligence', message='Test error.')
+        ls.log(prio=logging.CRITICAL, subsystem='Intelligence', message='Test critical.')
 
-    for i in ls.logging_queue:
-        pipe_to_server.send(ls.to_bytes())
+        for i in ls.logging_queue:
+            pipe_to_server.send(ls.to_bytes())
 
-    logging_server_proc.join()
+        time.sleep(5)  # JUST FOR DEMO PURPOSES
+
+    # logging_server_proc.join()
 
 
 if __name__ == '__main__':

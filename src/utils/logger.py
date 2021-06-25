@@ -127,19 +127,24 @@ class LoggerClient:
             if prio == 'DEBUG':
                 if self._save:
                     logging.debug(log)
+
             elif prio == 'INFO':
                 if self._save:
                     logging.info(log)
+
             elif prio == 'WARNING':
                 if self._save:
                     logging.warning(log)
+
             elif prio == 'ERROR':
                 if self._save:
                     logging.error(log)
+
             elif prio == 'CRITICAL':
                 if self._save:
                     logging.critical(log)
-        self.logging_queue = self.logging_queue[1:]
+            self.logging_queue = self.logging_queue[1:]
+            return log
 
 
 if __name__ == '__main__':
