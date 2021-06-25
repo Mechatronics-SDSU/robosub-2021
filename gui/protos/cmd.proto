@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+// Simple RPC
+service CommandGRPC {
+  // Sends a command request
+  rpc SendCommandRequest(MsgRequest) returns (MsgReply) {}
+}
+
+// Contains request to server, can be a command_config class
+message MsgRequest {
+  string req = 1;
+}
+
+// Contains acknowledge to HOST
+message MsgReply {
+  string ack = 1;
+}
