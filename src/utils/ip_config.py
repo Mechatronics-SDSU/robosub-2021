@@ -28,6 +28,17 @@ def load_config():
         return config
 
 
+def load_config_from_file(fname):
+    """Loads config given a file name.
+    """
+    try:
+        with open(fname, 'rb') as f:
+            config = pickle.load(f)
+            return config
+    except FileNotFoundError:
+        print('File doesn\'t exist.')
+
+
 def save_config(config):
     """Saves config to file.
     """

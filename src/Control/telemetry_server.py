@@ -7,10 +7,10 @@ The commented out code in run_server describes how loading data would look, give
 import numpy as np
 import socket
 
-from telemetry import Telemetry
+from src.utils.telemetry import Telemetry
 
 SERVER_HOSTNAME = ''
-SERVER_PORT = 50004
+SERVER_PORT = 50003
 
 
 def run_server():
@@ -31,9 +31,9 @@ def run_server():
         s.bind((SERVER_HOSTNAME, SERVER_PORT))
         s.listen()
         conn, address = s.accept()
+        print('Listening...')
         while True:
             result = conn.recvfrom(1024)[0]
-            print(result)
             if result == b'1':  # Data request
                 data = Telemetry(rand_data=True)  # Testing only, replace with actual sensors
                 conn.sendall(data.to_bytes())

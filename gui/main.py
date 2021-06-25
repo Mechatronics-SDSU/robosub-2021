@@ -72,11 +72,17 @@ import cv2
 # Internal
 import socket_route_guide_pb2
 import socket_route_guide_pb2_grpc
+import src.utils.ip_config as ipc
+import src.utils.telemetry as sensor_tel
 
 # Command
-grpc_remote_client_hostname_default = '192.168.0.133'
 grpc_remote_client_port_default = '50051'
-grpc_command_port_default = '50052'
+default_hostname = 'localhost'
+default_command_port_grpc = 50052
+default_port_video_socket = 50001
+default_port_logging_socket = 50002
+default_port_telemetry_socket = 50003
+default_port_pilot_socket = 50004
 
 # GUI
 top_bar_size = 30
@@ -85,13 +91,7 @@ resolution = (1600, 900)  # Gui root window size
 remote_resolution = (640, 480)  # Remote camera
 gui_update_ms = 10  # Update time for gui elements in ms
 
-# Video
-use_udp = False  # Do not touch UDP. Broken right now.
-sock_video_hostname_default = 'localhost'
-sock_video_port_default = '50001'
-sock_logging_port_default = '50002'
-sock_telemetry_port_default = '50003'
-sock_pilot_port_default = '50004'
+use_udp = False  # Do not touch UDP unless testing. Broken right now.
 
 
 def request_to_value(r):
@@ -167,6 +167,21 @@ class Window(tk.Frame):
     """ Window class, handles the GUI's 'master' or 'root' window and all subwindows
     """
     def __init__(self, master=None):
+        # Load ports from config file or set to defaults
+        self.port_command_grpc = default_command_port_grpc
+        self.port_video_socket = default_port_video_socket
+        self.port_logging_socket = default_port_logging_socket
+        self.port_telemetry_socket = default_port_telemetry_socket
+        self.port_pilot_socket = default_port_pilot_socket
+        self.cfg_file_path = 'config.pickle'
+        if os.path.exists(self.cfg_file_path):
+            ip = ipc.load_config()
+            self.port_command_grpc = ip.grpc_port
+            self.port_video_socket = ip.video_port
+            self.port_logging_socket = ip.logging_port
+            self.port_telemetry_socket = ip.telemetry_port
+            self.port_pilot_socket = ip.pilot_port
+
         # Main window
         tk.Frame.__init__(self, master)
         self.master = master
@@ -191,7 +206,7 @@ class Window(tk.Frame):
         self.info_window = tk.Frame(master=self.master, width=300, height=640, bg='white')
         # Text
         self.info_all_text = tk.Label(master=self.info_window, text='ALL STATUSES:', bd=0, bg='white')
-        self.info_all_comms_text = tk.Label(master=self.info_window, text='COMMS @' + grpc_remote_client_hostname_default, bd=0, bg='black', fg='white')
+        self.info_all_comms_text = tk.Label(master=self.info_window, text='COMMS @' + default_hostname, bd=0, bg='black', fg='white')
         # Config
         self.config_is_set = False
         self.config_status_button = tk.Button(master=self.info_window, text='     ', bg='red')
@@ -200,7 +215,7 @@ class Window(tk.Frame):
         self.cmd_connected = False  # If command's grpc server is connected
         self.cmd_status_button = tk.Button(master=self.info_window, text='     ', bg='red')
         self.cmd_status_text = tk.Label(master=self.info_window, text='[CMD_GRPC]')
-        self.cmd_status_port = tk.Label(master=self.info_window, text=':' + grpc_command_port_default, bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.cmd_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_command_grpc), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         # Video GRPC (to be deprecated)
         self.video_grpc_is_connected = False
         self.video_grpc_status_button = tk.Button(master=self.info_window, text='     ', bg='red')
@@ -213,7 +228,7 @@ class Window(tk.Frame):
         self.video_socket_is_connected = False  # Connection
         self.video_socket_connected_button = tk.Button(master=self.info_window, text='     ', bg='red')
         self.video_socket_status_text = tk.Label(master=self.info_window, text='[VID_SCK]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.video_socket_status_port = tk.Label(master=self.info_window, text=':' + sock_video_port_default, bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.video_socket_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_video_socket), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         # Logging Socket
         self.logging_socket_level = tk.IntVar(value=0)  # Enable/Level
         self.logging_socket_enable_button = tk.Button(master=self.info_window, text='     ', bg='black')
@@ -221,23 +236,24 @@ class Window(tk.Frame):
         self.logging_socket_is_connected = False  # Connection
         self.logging_socket_connected_button = tk.Button(master=self.info_window, text='     ', bg='red')
         self.logging_socket_status_text = tk.Label(master=self.info_window, text='[LOG_SCK]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.logging_socket_status_port = tk.Label(master=self.info_window, text=':' + sock_logging_port_default, bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.logging_socket_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_logging_socket), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         # Telemetry Socket
-        self.telemetry_socket_enabled = tk.BooleanVar(value=False)  # Enable
+        self.telemetry_socket_is_enabled = tk.BooleanVar(value=False)  # Enable
         self.telemetry_socket_enable_button = tk.Button(master=self.info_window, text='     ', bg='black')
         self.telemetry_socket_enable_text = tk.Label(master=self.info_window, text='[TEL_ENABLED]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.telemetry_socket_is_connected = False  # Connection
         self.telemetry_socket_connected_button = tk.Button(master=self.info_window, text='     ', bg='red')
         self.telemetry_socket_status_text = tk.Label(master=self.info_window, text='[TEL_SCK]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.telemetry_socket_status_port = tk.Label(master=self.info_window, text=':' + sock_telemetry_port_default, bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.telemetry_socket_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_telemetry_socket), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.telemetry_current_state = sensor_tel.Telemetry()
         # Pilot Socket
-        self.pilot_socket_enabled = tk.BooleanVar(value=False)  # Enable
+        self.pilot_socket_is_enabled = tk.BooleanVar(value=False)  # Enable
         self.pilot_socket_enable_button = tk.Button(master=self.info_window, text='     ', bg='black')
         self.pilot_socket_enable_text = tk.Label(master=self.info_window, text='[PLT_ENABLED]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.pilot_socket_is_connected = False  # Connection
         self.pilot_socket_connected_button = tk.Button(master=self.info_window, text='     ', bg='red')
         self.pilot_socket_status_text = tk.Label(master=self.info_window, text='[PLT_SCK]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.pilot_socket_status_port = tk.Label(master=self.info_window, text=':' + sock_pilot_port_default, bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.pilot_socket_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_pilot_socket), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         # Mission
         self.mission_config_string = tk.StringVar(value='None')  # Mission to do this run
         self.mission_config_text = tk.Label(master=self.info_window, text='[MISSION]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
@@ -265,15 +281,25 @@ class Window(tk.Frame):
         # Top Menu Bar
         self.top_bar.grid(column=0, row=0, padx=0, sticky='W')
         self.top_bar.wait_visibility()
-
         # Build buttons for top menu bar
-        config_button = Button(master=self.top_bar, text='Config', justify=LEFT, anchor='w', command=partial(self.config_box))
+        # Config
+        config_button = Button(master=self.top_bar, text='Set Config', justify=LEFT, anchor='w', command=partial(self.config_box))
         config_button.grid(column=0, row=0, sticky=W)
-
-        video_start_button = Button(master=self.top_bar, text='Start Video', justify=LEFT, anchor='w', command=self.init_video_socket)
+        # Video
+        video_start_button = Button(master=self.top_bar, text='Start Vid', justify=LEFT, anchor='w', command=self.init_video_socket)
         video_start_button.grid(column=1, row=0, sticky=W)
+        # Logging
+        logging_start_button = Button(master=self.top_bar, text='Start Log', justify=LEFT, anchor='w', command=self.init_logging_socket)
+        logging_start_button.grid(column=2, row=0, sticky=W)
+        # Telemetry
+        telemetry_start_button = Button(master=self.top_bar, text='Start Tel', justify=LEFT, anchor='w', command=self.init_telemetry_socket)
+        telemetry_start_button.grid(column=3, row=0, sticky=W)
+        # Pilot
+        pilot_start_button = Button(master=self.top_bar, text='Start Plt', justify=LEFT, anchor='w', command=self.init_pilot_socket)
+        pilot_start_button.grid(column=4, row=0, sticky=W)
+        # Quit Button
         quit_button = Button(master=self.top_bar, text='Exit', justify=LEFT, anchor='w', command=self.client_exit)
-        quit_button.grid(column=2, row=0, sticky=W)
+        quit_button.grid(column=5, row=0, sticky=W)
 
         # Logging Window
         self.logging_window.grid(column=0, row=1)
@@ -410,24 +436,24 @@ class Window(tk.Frame):
                                                    command=partial(self.val_set, self.logging_socket_level, 0)).grid(column=2, row=0)
         telemetry_radio_enable = Radiobutton(telemetry_diag,
                                              text='Enable',
-                                             variable=self.telemetry_socket_enabled,
+                                             variable=self.telemetry_socket_is_enabled,
                                              value=1,
-                                             command=partial(self.val_set, self.telemetry_socket_enabled, True)).grid(column=0, row=0)
+                                             command=partial(self.val_set, self.telemetry_socket_is_enabled, True)).grid(column=0, row=0)
         telemetry_radio_disable = Radiobutton(telemetry_diag,
                                               text='Disable',
-                                              variable=self.telemetry_socket_enabled,
+                                              variable=self.telemetry_socket_is_enabled,
                                               value=0,
-                                              command=partial(self.val_set, self.telemetry_socket_enabled, False)).grid(column=1, row=0)
+                                              command=partial(self.val_set, self.telemetry_socket_is_enabled, False)).grid(column=1, row=0)
         pilot_radio_enable = Radiobutton(pilot_diag,
                                          text='Enable',
-                                         variable=self.pilot_socket_enabled,
+                                         variable=self.pilot_socket_is_enabled,
                                          value=1,
-                                         command=partial(self.val_set, self.pilot_socket_enabled, True)).grid(column=0, row=0)
+                                         command=partial(self.val_set, self.pilot_socket_is_enabled, True)).grid(column=0, row=0)
         pilot_radio_disable = Radiobutton(pilot_diag,
                                           text='Disable',
-                                          variable=self.pilot_socket_enabled,
+                                          variable=self.pilot_socket_is_enabled,
                                           value=0,
-                                          command=partial(self.val_set, self.pilot_socket_enabled, False)).grid(column=1, row=0)
+                                          command=partial(self.val_set, self.pilot_socket_is_enabled, False)).grid(column=1, row=0)
         mission_radio_all = Radiobutton(mission_diag,
                                         text='All',
                                         variable=self.mission_config_string,
@@ -481,7 +507,34 @@ class Window(tk.Frame):
     def init_video_socket(self):
         """Initializes video socket connection from gui
         """
-        self.out_pipe.send(('video', 'gui', 'initialize'))
+        if self.video_socket_is_enabled.get():
+            self.out_pipe.send(('video', 'gui', 'initialize'))
+        else:
+            self.diag_box('Video socket is not enabled!')
+
+    def init_logging_socket(self):
+        """Initializes logging socket connection from gui
+        """
+        if self.logging_socket_level.get() > 0:
+            self.out_pipe.send(('logging', 'gui', 'initialize_' + str(self.logging_socket_level.get())))
+        else:
+            self.diag_box('Logging socket is not enabled!')
+
+    def init_telemetry_socket(self):
+        """Initializes telemetry socket connection from gui
+        """
+        if self.telemetry_socket_is_enabled.get():
+            self.out_pipe.send(('telemetry', 'gui', 'initialize', default_hostname, self.port_telemetry_socket))
+        else:
+            self.diag_box('Telemetry socket is not enabled!')
+
+    def init_pilot_socket(self):
+        """Initializes pilot socket connection from gui
+        """
+        if self.pilot_socket_is_enabled.get():
+            self.out_pipe.send(('pilot', 'gui', 'initialize'))
+        else:
+            self.diag_box('Pilot socket is not enabled!')
 
     def run_logger(self):
         """Adds the first element in the queue to the logs.
@@ -555,14 +608,23 @@ class Window(tk.Frame):
             conn = mp.connection.wait([self.in_pipe], timeout=-1)
             if len(conn) > 0:
                 cmd = conn[0].recv()
-                if cmd[2] == 'conn_grpc':
-                    self.video_grpc_is_connected = True
-                elif cmd[2] == 'no_conn_grpc':
-                    self.video_grpc_is_connected = False
-                elif cmd[2] == 'conn_socket':
-                    self.video_socket_is_connected = True
-                elif cmd[2] == 'no_conn_socket':
-                    self.video_socket_is_connected = False
+                if cmd[1] == 'video':
+                    if cmd[2] == 'conn_grpc':
+                        self.video_grpc_is_connected = True
+                    elif cmd[2] == 'no_conn_grpc':
+                        self.video_grpc_is_connected = False
+                    elif cmd[2] == 'conn_socket':
+                        self.video_socket_is_connected = True
+                    elif cmd[2] == 'no_conn_socket':
+                        self.video_socket_is_connected = False
+                elif cmd[1] == 'telemetry':
+                    if isinstance(cmd[2], str):
+                        if cmd[2] == 'conn_socket':
+                            self.telemetry_socket_is_connected = True
+                    elif isinstance(cmd[2], bytes):
+                        tel = sensor_tel.Telemetry()
+                        tel.load_data_from_bytes(cmd[2])
+                        self.telemetry_current_state = tel
 
     def update(self):
         """Update function to read elements from other processes into the GUI
@@ -576,10 +638,11 @@ class Window(tk.Frame):
         self.update_button(self.video_socket_connected_button, self.video_socket_is_connected)
         self.update_button(self.config_status_button, self.config_is_set)
         self.update_button_enable(self.video_socket_enable_button, self.video_socket_is_enabled.get())
-        self.update_button_enable(self.telemetry_socket_enable_button, self.telemetry_socket_enabled.get())
-        self.update_button_enable(self.pilot_socket_enable_button, self.pilot_socket_enabled.get())
+        self.update_button_enable(self.telemetry_socket_enable_button, self.telemetry_socket_is_enabled.get())
+        self.update_button_enable(self.pilot_socket_enable_button, self.pilot_socket_is_enabled.get())
         self.update_button_int(self.logging_socket_enable_button, self.logging_socket_level.get())
         self.update_status_string(self.mission_config_text_current, self.mission_config_string.get())
+        print(self.telemetry_current_state.sensors['accelerometer'])  # Print accel data to show it's in GUI
         # Check for pipe updates
         self.read_pipe()
         # Loop, does not recurse despite appearance
@@ -620,7 +683,7 @@ def video_proc_udp(logger, video_pipe_in, video_pipe_out, video_stream_out):
             pass
         elif code == 'initialize':
             # Start up a GRPC client
-            client = GrpcClient(hostname=grpc_remote_client_hostname_default,
+            client = GrpcClient(hostname=default_hostname,
                                 port=grpc_remote_client_port_default,
                                 logger=logger)
             response = client.send(2)
@@ -639,7 +702,7 @@ def video_proc_udp(logger, video_pipe_in, video_pipe_out, video_stream_out):
         # Connect over UDP
         if socket_started:
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                s.connect((sock_video_hostname_default, socket_port))
+                s.connect((default_hostname, socket_port))
                 s.settimeout(1)
                 sock_resp = b'1'
                 s.sendall(sock_resp)
@@ -687,7 +750,7 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
             pass
         elif code == 'initialize':
             # Start up a GRPC client
-            client = GrpcClient(hostname=grpc_remote_client_hostname_default,
+            client = GrpcClient(hostname=default_hostname,
                                 port=grpc_remote_client_port_default,
                                 logger=logger)
             response = client.send(2)  # Error handles, returning ! on fail
@@ -713,7 +776,7 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
         if socket_started:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                s.connect((sock_video_hostname_default, socket_port))
+                s.connect((default_hostname, socket_port))
                 data = b''
                 payload_size = struct.calcsize('>L')
                 # Get frame data and send to video_stream_out
@@ -735,26 +798,73 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
                     video_stream_out.send(frame)
 
 
+def logging_proc(logger, logging_pipe_in, logging_pipe_out):
+    """Receives logs from Intelligence over TCP connection.
+    """
+    while True:
+        pass
+
+
+def telemetry_proc(logger, telemetry_pipe_in, telemetry_pipe_out):
+    """Receives telemetry from Control over TCP connection.
+    """
+    hostname = ''
+    port = ''
+    started = False
+    while True:
+        conn = mp.connection.wait([telemetry_pipe_in], timeout=-1)
+        if len(conn) > 0:
+            result = conn[0].recv()
+            if result[2] == 'initialize':
+                hostname = result[3]
+                port = result[4]
+                started = True
+        if started:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                s.connect((hostname, port))
+                telemetry_pipe_out.send(('gui', 'telemetry', 'conn_socket'))
+                while True:
+                    s.sendall(b'1')
+                    data = s.recv(4096)
+                    telemetry_pipe_out.send(('gui', 'telemetry', data))
+
+
+def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out):
+    """Sends controller input to Control over TCP connection.
+    """
+    while True:
+        pass
+
+
 def router(logger,  # Gui logger
            from_gui_pipe_in, to_gui_pipe_out,  # Gui pipe
            from_video_pipe_in, to_video_pipe_out,  # Video pipe
            from_logger_pipe_in, to_logger_pipe_out,
            from_telemetry_pipe_in, to_telemetry_pipe_out,
-           from_pilot_pipe_in, to_pilot_pipe_out,
-           from_main_pipe_in, to_main_pipe_out
+           from_pilot_pipe_in, to_pilot_pipe_out
            ):
     """Routes messages between pipes, given destination of the message.
     """
     while True:
         # Wait on all pipe ins. See documentation for system communication pathways for more information.
         conn = mp.connection.wait([from_gui_pipe_in,
-                                   from_video_pipe_in], timeout=-1)
+                                   from_video_pipe_in,
+                                   from_logger_pipe_in,
+                                   from_telemetry_pipe_in,
+                                   from_pilot_pipe_in], timeout=-1)
         if len(conn) > 0:
             result = conn[0].recv()
             if result[0] == 'video':  # Send to video
                 to_video_pipe_out.send(result)
             elif result[0] == 'gui':  # Send to gui
                 to_gui_pipe_out.send(result)
+            elif result[0] == 'logging':  # Send to logging
+                to_logger_pipe_out.send(result)
+            elif result[0] == 'telemetry':  # Send to telemetry
+                to_telemetry_pipe_out.send(result)
+            elif result[0] == 'pilot':  # Send to pilot
+                to_pilot_pipe_out.send(result)
 
 
 def main():
@@ -764,10 +874,6 @@ def main():
         context = get_context('spawn')
     else:
         context = get_context('fork')
-
-    # Main pipe (for this function)
-    pipe_to_main_from_router, main_pipe_in_from_router = context.Pipe()
-    pipe_to_router_from_main, pipe_in_from_main = context.Pipe()
 
     # Video stream pipe
     pipe_to_gui_from_video, pipe_in_from_video_stream = context.Pipe()
@@ -792,14 +898,20 @@ def main():
     # Logging socket
     pipe_to_logger_from_router, log_pipe_in_from_router = context.Pipe()
     pipe_to_router_from_logger, pipe_in_from_logger = context.Pipe()
+    logger_proc = context.Process(target=logging_proc, args=(gui_logger, log_pipe_in_from_router, pipe_to_router_from_logger))
+    logger_proc.start()
 
     # Telemetry socket
     pipe_to_telemetry_from_router, tel_pipe_in_from_router = context.Pipe()
     pipe_to_router_from_telemetry, pipe_in_from_telemetry = context.Pipe()
+    tel_proc = context.Process(target=telemetry_proc, args=(gui_logger, tel_pipe_in_from_router, pipe_to_router_from_telemetry))
+    tel_proc.start()
 
     # Pilot socket
     pipe_to_pilot_from_router, plt_pipe_in_from_router = context.Pipe()
     pipe_to_router_from_pilot, pipe_in_from_pilot = context.Pipe()
+    plt_proc = context.Process(target=pilot_proc, args=(gui_logger, plt_pipe_in_from_router, pipe_to_router_from_pilot))
+    plt_proc.start()
 
     # Router
     router_proc = context.Process(target=router, args=(gui_logger,
@@ -807,8 +919,7 @@ def main():
                                                     pipe_in_from_video, pipe_to_video_from_router,  # Video
                                                     pipe_in_from_logger, pipe_to_logger_from_router,  # Logger
                                                     pipe_in_from_telemetry, pipe_to_telemetry_from_router,  # Telemetry
-                                                    pipe_in_from_pilot, pipe_to_pilot_from_router,  # Pilot
-                                                    pipe_in_from_main, pipe_to_main_from_router))  # Main
+                                                    pipe_in_from_pilot, pipe_to_pilot_from_router,))  # Pilot
     router_proc.start()
 
 
