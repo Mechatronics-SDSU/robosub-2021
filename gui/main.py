@@ -62,7 +62,7 @@ import pygame as pg
 # GUI
 import tkinter as tk
 from tkinter import *
-from tkinter import messagebox
+from tkinter import messagebox, simpledialog
 
 # External libs
 from PIL import ImageTk
@@ -201,6 +201,7 @@ class Window(tk.Frame):
     """
     def __init__(self, pilot_pipe, master=None):
         # Load ports from config file or set to defaults
+        self.remote_hostname = default_hostname
         self.port_command_grpc = default_command_port_grpc
         self.port_video_socket = default_port_video_socket
         self.port_logging_socket = default_port_logging_socket
@@ -245,7 +246,7 @@ class Window(tk.Frame):
         self.info_window = tk.Frame(master=self.master, width=300, height=640, bg='white')
         # Text
         self.info_all_text = tk.Label(master=self.info_window, text='ALL STATUSES:', bd=0, bg='white')
-        self.info_all_comms_text = tk.Label(master=self.info_window, text='COMMS @' + default_hostname, bd=0, bg='black', fg='white')
+        self.info_all_comms_text = tk.Label(master=self.info_window, text='COMMS @' + self.remote_hostname, bd=0, bg='black', fg='white')
         # Config
         self.config_is_set = False
         self.cmd_config = None
@@ -331,30 +332,33 @@ class Window(tk.Frame):
         # Config
         config_text = Label(master=self.top_bar, text='Config: ', justify=LEFT, anchor='w')
         config_text.grid(column=0, row=0, sticky=W)
+        # Set Hostname
+        hostname_config_button = Button(master=self.top_bar, text='Remote IP', justify=LEFT, anchor='w', command=self.set_hostname)
+        hostname_config_button.grid(column=1, row=0, sticky=W)
         # Set
-        config_button = Button(master=self.top_bar, text='Set', justify=LEFT, anchor='w', command=partial(self.config_box))
-        config_button.grid(column=1, row=0, sticky=W)
+        config_button = Button(master=self.top_bar, text='Enable Sockets', justify=LEFT, anchor='w', command=partial(self.config_box))
+        config_button.grid(column=2, row=0, sticky=W)
         # Send Command Config
         send_config_button = Button(master=self.top_bar, text='Send', justify=LEFT, anchor='w', command=self.cmd_grpc_button)
-        send_config_button.grid(column=2, row=0, sticky=W)
+        send_config_button.grid(column=3, row=0, sticky=W)
         # Sockets
         config_text = Label(master=self.top_bar, text='Sockets: ', justify=LEFT, anchor='w')
-        config_text.grid(column=3, row=0, sticky=W)
+        config_text.grid(column=4, row=0, sticky=W)
         # Video
         video_start_button = Button(master=self.top_bar, text='Video', justify=LEFT, anchor='w', command=self.init_video_socket)
-        video_start_button.grid(column=4, row=0, sticky=W)
+        video_start_button.grid(column=5, row=0, sticky=W)
         # Logging
         logging_start_button = Button(master=self.top_bar, text='Logging', justify=LEFT, anchor='w', command=self.init_logging_socket)
-        logging_start_button.grid(column=5, row=0, sticky=W)
+        logging_start_button.grid(column=6, row=0, sticky=W)
         # Telemetry
         telemetry_start_button = Button(master=self.top_bar, text='Telemetry', justify=LEFT, anchor='w', command=self.init_telemetry_socket)
-        telemetry_start_button.grid(column=6, row=0, sticky=W)
+        telemetry_start_button.grid(column=7, row=0, sticky=W)
         # Pilot
         pilot_start_button = Button(master=self.top_bar, text='Pilot', justify=LEFT, anchor='w', command=self.init_pilot_socket)
-        pilot_start_button.grid(column=7, row=0, sticky=W)
+        pilot_start_button.grid(column=8, row=0, sticky=W)
         # Quit Button
         quit_button = Button(master=self.top_bar, text='Exit', justify=LEFT, anchor='w', command=self.client_exit)
-        quit_button.grid(column=8, row=0, sticky=W)
+        quit_button.grid(column=9, row=0, sticky=W)
 
         # Logging Window
         self.logging_window.grid(column=0, row=1)
@@ -570,7 +574,7 @@ class Window(tk.Frame):
         """Attempts to send a GRPC command packet to the SUB.
         """
         # Start up a GRPC client
-        client = CMDGrpcClient(hostname=default_hostname,
+        client = CMDGrpcClient(hostname=self.remote_hostname,
                             port=self.port_command_grpc,
                             logger=self.logger)
         response = client.send(1)
@@ -598,7 +602,7 @@ class Window(tk.Frame):
         """Initializes logging socket connection from gui
         """
         if self.logging_socket_level.get() > 0:
-            self.out_pipe.send(('logging', 'gui', 'initialize', default_hostname, self.port_logging_socket))
+            self.out_pipe.send(('logging', 'gui', 'initialize', self.remote_hostname, self.port_logging_socket))
         else:
             self.diag_box('Logging socket is not enabled!')
 
@@ -606,7 +610,7 @@ class Window(tk.Frame):
         """Initializes telemetry socket connection from gui
         """
         if self.telemetry_socket_is_enabled.get():
-            self.out_pipe.send(('telemetry', 'gui', 'initialize', default_hostname, self.port_telemetry_socket))
+            self.out_pipe.send(('telemetry', 'gui', 'initialize', self.remote_hostname, self.port_telemetry_socket))
         else:
             self.diag_box('Telemetry socket is not enabled!')
 
@@ -617,6 +621,13 @@ class Window(tk.Frame):
             self.out_pipe.send(('pilot', 'gui', 'initialize', self.port_pilot_socket, 'XBONE'))
         else:
             self.diag_box('Pilot socket is not enabled!')
+
+    def set_hostname(self):
+        """Sets the hostname of the remote client.
+        """
+        prompt = simpledialog.askstring('Input', 'Set the remote hostname here:', parent=self.master)
+        self.remote_hostname = prompt
+        self.info_all_comms_text.configure(self.info_all_comms_text, text='COMMS @' + self.remote_hostname)
 
     def run_logger(self):
         """Adds the first element in the queue to the logs.
