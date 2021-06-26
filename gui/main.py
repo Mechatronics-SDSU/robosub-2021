@@ -57,6 +57,7 @@ import subprocess as sub
 from functools import partial
 import pickle
 import struct
+import pygame as pg
 
 # GUI
 import tkinter as tk
@@ -75,6 +76,7 @@ import socket_route_guide_pb2_grpc
 import src.utils.ip_config as ipc
 import src.utils.logger as sub_logging
 import src.utils.telemetry as sensor_tel
+import src.utils.pilot as ctrl_pilot
 
 # Command
 grpc_remote_client_port_default = '50051'
@@ -186,7 +188,7 @@ class LoggerWrapper:
 class Window(tk.Frame):
     """Window class, handles the GUI's 'master' or 'root' window and all subwindows
     """
-    def __init__(self, master=None):
+    def __init__(self, pilot_pipe, master=None):
         # Load ports from config file or set to defaults
         self.port_command_grpc = default_command_port_grpc
         self.port_video_socket = default_port_video_socket
@@ -201,6 +203,12 @@ class Window(tk.Frame):
             self.port_logging_socket = ip.logging_port
             self.port_telemetry_socket = ip.telemetry_port
             self.port_pilot_socket = ip.pilot_port
+
+        # Pygame for controller
+        pg.init()
+        pg.joystick.init()
+        self.js = pg.joystick.Joystick(0)
+        self.js.init()
 
         # Main window
         tk.Frame.__init__(self, master)
@@ -287,6 +295,7 @@ class Window(tk.Frame):
         # Data I/O to other processes
         self.in_pipe = None
         self.out_pipe = None
+        self.pilot_pipe_out = pilot_pipe
         self.video_stream_pipe_in = None
         self.text = Text(self.logging_window)
 
@@ -557,7 +566,7 @@ class Window(tk.Frame):
         """Initializes pilot socket connection from gui
         """
         if self.pilot_socket_is_enabled.get():
-            self.out_pipe.send(('pilot', 'gui', 'initialize'))
+            self.out_pipe.send(('pilot', 'gui', 'initialize', self.port_pilot_socket, 'XBONE'))
         else:
             self.diag_box('Pilot socket is not enabled!')
 
@@ -630,6 +639,22 @@ class Window(tk.Frame):
                     self.img = ImageTk.PhotoImage(PILImage.fromarray(image))
                     self.video_window.itemconfig(self.video_window_img, image=self.img)
 
+    def send_controller_state(self):
+        """Sends current controller state to Pilot process
+        """
+
+        if self.js.get_init() and self.pilot_socket_is_connected:
+            control_in = np.zeros(shape=(1,
+                                    self.js.get_numaxes()
+                                     + self.js.get_numbuttons()
+                                     + self.js.get_numhats()))
+            for i in range(self.js.get_numaxes()):
+                control_in.put(i, self.js.get_axis(i))
+            for i in range(self.js.get_numaxes(), self.js.get_numbuttons()):  # Buttons
+                control_in.put(i, self.js.get_button(i - self.js.get_numaxes()))
+            control_in.put((self.js.get_numaxes() + self.js.get_numbuttons()), self.js.get_hat(0))  # Hat
+            self.pilot_pipe_out.send((control_in.tobytes()))
+
     def read_pipe(self):
         """Checks input pipe for info from other processes, processes commands here
         """
@@ -660,6 +685,9 @@ class Window(tk.Frame):
                         tel = sensor_tel.Telemetry()
                         tel.load_data_from_bytes(cmd[2])
                         self.telemetry_current_state = tel
+                elif cmd[1] == 'pilot':
+                    if cmd[2] == 'conn_socket':
+                        self.pilot_socket_is_connected = True
 
     def update(self):
         """Update function to read elements from other processes into the GUI
@@ -667,18 +695,21 @@ class Window(tk.Frame):
         """
         # Manual on update functions below:
         self.run_logger()
-        self.update_frames()
+        self.update_frames()  # Update video frame
+        self.send_controller_state()  # Send current inputs
         # Update all button statuses
         self.update_button(self.video_grpc_status_button, self.video_grpc_is_connected)
         self.update_button(self.video_socket_connected_button, self.video_socket_is_connected)
         self.update_button(self.logging_socket_connected_button, self.logging_socket_is_connected)
         self.update_button(self.telemetry_socket_connected_button, self.telemetry_socket_is_connected)
+        self.update_button(self.pilot_socket_connected_button, self.pilot_socket_is_connected)
         self.update_button(self.config_status_button, self.config_is_set)
         self.update_button_enable(self.video_socket_enable_button, self.video_socket_is_enabled.get())
         self.update_button_enable(self.telemetry_socket_enable_button, self.telemetry_socket_is_enabled.get())
         self.update_button_enable(self.pilot_socket_enable_button, self.pilot_socket_is_enabled.get())
         self.update_button_int(self.logging_socket_enable_button, self.logging_socket_level.get())
         self.update_status_string(self.mission_config_text_current, self.mission_config_string.get())
+        # DEMO PURPOSES ONLY
         print(self.telemetry_current_state.sensors['accelerometer'])  # Print accel data to show it's in GUI
 
         # Check for pipe updates
@@ -687,13 +718,13 @@ class Window(tk.Frame):
         self.after(gui_update_ms, self.update)
 
 
-def gui_proc_main(gui_input, gui_output, gui_logger, video_stream_pipe_in):
+def gui_proc_main(gui_input, gui_output, gui_logger, video_stream_pipe_in, pilot_pipe_out):
     """GUI Driver code
     """
     # Build Application
     root_window = tk.Tk()
     root_window.geometry(str(resolution[0] - edge_size - edge_size) + "x" + str(resolution[1] - top_bar_size - edge_size - edge_size))
-    application = Window(master=root_window)
+    application = Window(pilot_pipe_out, master=root_window)
 
     # Queues for multiprocessing passed into object
     application.logger = gui_logger
@@ -893,11 +924,42 @@ def telemetry_proc(logger, telemetry_pipe_in, telemetry_pipe_out):
                     telemetry_pipe_out.send(('gui', 'telemetry', data))
 
 
-def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out):
+def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui):
     """Sends controller input to Control over TCP connection.
     """
+    port = ''
+    profile = ''
+    last_input = np.zeros(shape=(1, 1))
+    started = False
     while True:
-        pass
+        conn = mp.connection.wait([pilot_pipe_in], timeout=-1)
+        if len(conn) > 0:
+            result = conn[0].recv()
+            if isinstance(result[2], str):
+                if result[2] == 'initialize':
+                    port = result[3]
+                    profile = result[4]
+                    started = True
+        if started:
+            # Controller
+            controller = ctrl_pilot.Controller(name=profile)
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                s.bind(('', port))
+                s.listen(5)
+                conn, address = s.accept()
+                pilot_pipe_out.send(('gui', 'pilot', 'conn_socket'))
+                while True:
+                    result = conn.recvfrom(1024)[0]
+                    if result == b'1':  # Client requests data
+                        # Check queue for last input
+                        controller_input = mp.connection.wait([pipe_in_from_gui], timeout=-1)
+                        if len(controller_input) > 0:
+                            last_input = controller_input[len(controller_input)-1].recv()
+                            conn.sendall(last_input)
+                            controller_input.clear()  # Clear input after sending latest
+                        else:  # Send previous input
+                            conn.sendall(last_input)
 
 
 def router(logger,  # Gui logger
@@ -938,14 +1000,18 @@ def main():
     else:
         context = get_context('fork')
 
-    # Video stream pipe
+    # Dedicated Video stream pipe
     pipe_to_gui_from_video, pipe_in_from_video_stream = context.Pipe()
+
+    # Dedicated Controller/Pilot stream pipe
+    pipe_to_pilot_from_gui, pilot_pipe_in_from_gui = context.Pipe()
 
     # Gui
     gui_logger = LoggerWrapper()
+
     pipe_to_gui_from_router, gui_pipe_in_from_router = context.Pipe()
     pipe_to_router_from_gui, pipe_in_from_gui = context.Pipe()
-    gui_proc = context.Process(target=gui_proc_main, args=(gui_pipe_in_from_router, pipe_to_router_from_gui, gui_logger, pipe_in_from_video_stream))
+    gui_proc = context.Process(target=gui_proc_main, args=(gui_pipe_in_from_router, pipe_to_router_from_gui, gui_logger, pipe_in_from_video_stream, pipe_to_pilot_from_gui))
     gui_proc.start()
     gui_logger.log('[@GUI] Gui Initialized.')  # Log to Gui from main process
 
@@ -973,7 +1039,7 @@ def main():
     # Pilot socket
     pipe_to_pilot_from_router, plt_pipe_in_from_router = context.Pipe()
     pipe_to_router_from_pilot, pipe_in_from_pilot = context.Pipe()
-    plt_proc = context.Process(target=pilot_proc, args=(gui_logger, plt_pipe_in_from_router, pipe_to_router_from_pilot))
+    plt_proc = context.Process(target=pilot_proc, args=(gui_logger, plt_pipe_in_from_router, pipe_to_router_from_pilot, pilot_pipe_in_from_gui))
     plt_proc.start()
 
     # Router

@@ -24,7 +24,7 @@ import pygame as pg
 
 started = True
 hostname = ''
-port = 50003
+port = 50004
 
 
 def run_server():
