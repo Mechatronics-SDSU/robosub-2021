@@ -71,12 +71,13 @@ import numpy as np
 import cv2
 
 # Internal
-import socket_route_guide_pb2
-import socket_route_guide_pb2_grpc
+import src.utils.cmd_pb2 as cmd_pb2
+import src.utils.cmd_pb2_grpc as cmd_pb2_grpc
 import src.utils.ip_config as ipc
 import src.utils.logger as sub_logging
 import src.utils.telemetry as sensor_tel
 import src.utils.pilot as ctrl_pilot
+import src.utils.command_configuration as cmd
 
 # Command
 grpc_remote_client_port_default = '50051'
@@ -110,6 +111,15 @@ def request_to_value(r):
     return result
 
 
+def get_int_from_bool(b):
+    """Returns int version of a boolean.
+    """
+    if b:
+        return 1
+    else:
+        return 0
+
+
 def log_parse(input_data):
     """Logs sometimes arrive in >1 at a time.
     Parses them out and returns a list.
@@ -129,25 +139,26 @@ def log_parse(input_data):
     return result
 
 
-class GrpcClient:
+class CMDGrpcClient:
     """Handles GRPC clients with related methods.
     """
     def __init__(self, hostname, port, logger):
         self.remote_client = str(hostname)
         self.port = str(port)
         self._channel = grpc.insecure_channel(self.remote_client + ':' + self.port)
-        self._stub = socket_route_guide_pb2_grpc.SocketGRPCStub(self._channel)
+        self._stub = cmd_pb2_grpc.CommandGRPCStub(self._channel)
         self.logger = logger
-        logger.log('[GRPC] Started up client.')
+        logger.log('[GRPC] Started up client. ' + self.remote_client + ':' + self.port)
 
     def send(self, request):
         """Sends argument over GRPC
         @:param request to be sent over GRPC, as defined in protobuf
         """
-        if (request == 2) or (request == '2'):
+        if (request == 1) or (request == '1'):
             self.logger.log('[GRPC] Sending socket startup request to server...')
         try:
-            response = self._stub.SendSocketRequest(socket_route_guide_pb2.MsgRequest(req=(str(request))))
+            response = self._stub.SendCommandRequest(cmd_pb2.MsgRequest(req=(str(request))))
+            response = request_to_value(str(response))
         except grpc._channel._InactiveRpcError:
             self.logger.log('[GRPC] Error communicating with server. (Is it on?)')
             response = '!'
@@ -216,7 +227,7 @@ class Window(tk.Frame):
         self.closing = False
 
         # Top Bar
-        self.top_bar = tk.Frame(master=self.master, width=resolution[0], height=30, bg='black')
+        self.top_bar = tk.Frame(master=self.master, width=resolution[0], height=30, bg='white')
 
         # Logging Window
         self.logging_window = tk.Frame(master=self.master, width=640, height=480, bg='white')
@@ -237,6 +248,7 @@ class Window(tk.Frame):
         self.info_all_comms_text = tk.Label(master=self.info_window, text='COMMS @' + default_hostname, bd=0, bg='black', fg='white')
         # Config
         self.config_is_set = False
+        self.cmd_config = None
         self.config_status_button = tk.Button(master=self.info_window, text='     ', bg='red')
         self.config_status_text = tk.Label(master=self.info_window, text='[Config Set]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
         # CMD GRPC
@@ -317,23 +329,32 @@ class Window(tk.Frame):
         self.top_bar.wait_visibility()
         # Build buttons for top menu bar
         # Config
-        config_button = Button(master=self.top_bar, text='Set Config', justify=LEFT, anchor='w', command=partial(self.config_box))
-        config_button.grid(column=0, row=0, sticky=W)
+        config_text = Label(master=self.top_bar, text='Config: ', justify=LEFT, anchor='w')
+        config_text.grid(column=0, row=0, sticky=W)
+        # Set
+        config_button = Button(master=self.top_bar, text='Set', justify=LEFT, anchor='w', command=partial(self.config_box))
+        config_button.grid(column=1, row=0, sticky=W)
+        # Send Command Config
+        send_config_button = Button(master=self.top_bar, text='Send', justify=LEFT, anchor='w', command=self.cmd_grpc_button)
+        send_config_button.grid(column=2, row=0, sticky=W)
+        # Sockets
+        config_text = Label(master=self.top_bar, text='Sockets: ', justify=LEFT, anchor='w')
+        config_text.grid(column=3, row=0, sticky=W)
         # Video
-        video_start_button = Button(master=self.top_bar, text='Start Vid', justify=LEFT, anchor='w', command=self.init_video_socket)
-        video_start_button.grid(column=1, row=0, sticky=W)
+        video_start_button = Button(master=self.top_bar, text='Video', justify=LEFT, anchor='w', command=self.init_video_socket)
+        video_start_button.grid(column=4, row=0, sticky=W)
         # Logging
-        logging_start_button = Button(master=self.top_bar, text='Start Log', justify=LEFT, anchor='w', command=self.init_logging_socket)
-        logging_start_button.grid(column=2, row=0, sticky=W)
+        logging_start_button = Button(master=self.top_bar, text='Logging', justify=LEFT, anchor='w', command=self.init_logging_socket)
+        logging_start_button.grid(column=5, row=0, sticky=W)
         # Telemetry
-        telemetry_start_button = Button(master=self.top_bar, text='Start Tel', justify=LEFT, anchor='w', command=self.init_telemetry_socket)
-        telemetry_start_button.grid(column=3, row=0, sticky=W)
+        telemetry_start_button = Button(master=self.top_bar, text='Telemetry', justify=LEFT, anchor='w', command=self.init_telemetry_socket)
+        telemetry_start_button.grid(column=6, row=0, sticky=W)
         # Pilot
-        pilot_start_button = Button(master=self.top_bar, text='Start Plt', justify=LEFT, anchor='w', command=self.init_pilot_socket)
-        pilot_start_button.grid(column=4, row=0, sticky=W)
+        pilot_start_button = Button(master=self.top_bar, text='Pilot', justify=LEFT, anchor='w', command=self.init_pilot_socket)
+        pilot_start_button.grid(column=7, row=0, sticky=W)
         # Quit Button
         quit_button = Button(master=self.top_bar, text='Exit', justify=LEFT, anchor='w', command=self.client_exit)
-        quit_button.grid(column=5, row=0, sticky=W)
+        quit_button.grid(column=8, row=0, sticky=W)
 
         # Logging Window
         self.logging_window.grid(column=0, row=1)
@@ -524,6 +545,13 @@ class Window(tk.Frame):
         """Closes the config settings dialog box; changes variable to signify config is set.
         :param top: Window
         """
+        # Generate command configuration packet verifying inputs
+        config = cmd.CommandConfiguration(socket_codes=[self.logging_socket_level.get(),
+                                                        get_int_from_bool(self.video_socket_is_enabled.get()),
+                                                        get_int_from_bool(self.telemetry_socket_is_enabled.get())],
+                                        pilot_control=self.pilot_socket_is_enabled.get(),
+                                        mission=self.mission_config_string.get().lower())
+        self.cmd_config = config.gen_packet()
         self.config_is_set = True
         top.destroy()
 
@@ -537,6 +565,26 @@ class Window(tk.Frame):
         # Last thing done
         self.destroy()
         system.exit()
+
+    def cmd_grpc_button(self):
+        """Attempts to send a GRPC command packet to the SUB.
+        """
+        # Start up a GRPC client
+        client = CMDGrpcClient(hostname=default_hostname,
+                            port=self.port_command_grpc,
+                            logger=self.logger)
+        response = client.send(1)
+        if response == '!':
+            self.diag_box('Error communicating with server. (Is it on?)')
+        elif response == '1':  # Got acknowledge to set the config, send config
+            self.cmd_connected = True
+            if self.cmd_config is not None:
+                # Send Packet with command
+                print('Sending config...')
+                request = pickle.dumps(self.cmd_config).hex()
+                client.send(request)
+            else:
+                self.diag_box('Error, config not set')
 
     def init_video_socket(self):
         """Initializes video socket connection from gui
@@ -658,35 +706,35 @@ class Window(tk.Frame):
     def read_pipe(self):
         """Checks input pipe for info from other processes, processes commands here
         """
-        cmd = []
+        gui_cmd = []
         if self.in_pipe is not None:  # Checks for proper initialization first
             conn = mp.connection.wait([self.in_pipe], timeout=-1)
             if len(conn) > 0:
-                cmd = conn[0].recv()
-                if cmd[1] == 'video':
-                    if cmd[2] == 'conn_grpc':
+                gui_cmd = conn[0].recv()
+                if gui_cmd[1] == 'video':
+                    if gui_cmd[2] == 'conn_grpc':
                         self.video_grpc_is_connected = True
-                    elif cmd[2] == 'no_conn_grpc':
+                    elif gui_cmd[2] == 'no_conn_grpc':
                         self.video_grpc_is_connected = False
-                    elif cmd[2] == 'conn_socket':
+                    elif gui_cmd[2] == 'conn_socket':
                         self.video_socket_is_connected = True
-                    elif cmd[2] == 'no_conn_socket':
+                    elif gui_cmd[2] == 'no_conn_socket':
                         self.video_socket_is_connected = False
-                elif cmd[1] == 'logging':
-                    if cmd[2] == 'conn_socket':
+                elif gui_cmd[1] == 'logging':
+                    if gui_cmd[2] == 'conn_socket':
                         self.logging_socket_is_connected = True
                     else:
-                        self.remote_logging_queue.append(cmd[2])
-                elif cmd[1] == 'telemetry':
-                    if isinstance(cmd[2], str):
-                        if cmd[2] == 'conn_socket':
+                        self.remote_logging_queue.append(gui_cmd[2])
+                elif gui_cmd[1] == 'telemetry':
+                    if isinstance(gui_cmd[2], str):
+                        if gui_cmd[2] == 'conn_socket':
                             self.telemetry_socket_is_connected = True
-                    elif isinstance(cmd[2], bytes):
+                    elif isinstance(gui_cmd[2], bytes):
                         tel = sensor_tel.Telemetry()
-                        tel.load_data_from_bytes(cmd[2])
+                        tel.load_data_from_bytes(gui_cmd[2])
                         self.telemetry_current_state = tel
-                elif cmd[1] == 'pilot':
-                    if cmd[2] == 'conn_socket':
+                elif gui_cmd[1] == 'pilot':
+                    if gui_cmd[2] == 'conn_socket':
                         self.pilot_socket_is_connected = True
 
     def update(self):
@@ -698,6 +746,7 @@ class Window(tk.Frame):
         self.update_frames()  # Update video frame
         self.send_controller_state()  # Send current inputs
         # Update all button statuses
+        self.update_button(self.cmd_status_button, self.cmd_connected)
         self.update_button(self.video_grpc_status_button, self.video_grpc_is_connected)
         self.update_button(self.video_socket_connected_button, self.video_socket_is_connected)
         self.update_button(self.logging_socket_connected_button, self.logging_socket_is_connected)
@@ -710,7 +759,7 @@ class Window(tk.Frame):
         self.update_button_int(self.logging_socket_enable_button, self.logging_socket_level.get())
         self.update_status_string(self.mission_config_text_current, self.mission_config_string.get())
         # DEMO PURPOSES ONLY
-        print(self.telemetry_current_state.sensors['accelerometer'])  # Print accel data to show it's in GUI
+        # print(self.telemetry_current_state.sensors['accelerometer'])  # Print accel data to show it's in GUI
 
         # Check for pipe updates
         self.read_pipe()
@@ -752,7 +801,7 @@ def video_proc_udp(logger, video_pipe_in, video_pipe_out, video_stream_out):
             pass
         elif code == 'initialize':
             # Start up a GRPC client
-            client = GrpcClient(hostname=default_hostname,
+            client = CMDGrpcClient(hostname=default_hostname,
                                 port=grpc_remote_client_port_default,
                                 logger=logger)
             response = client.send(2)
@@ -808,7 +857,7 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
     code = ''
     client = None
     socket_started = False
-    socket_port = 0
+    socket_port = 50001
     while True:
         # Wait for this process to receive info from the pipe, read it in when it does
         conn = mp.connection.wait([video_pipe_in], timeout=-1)
@@ -818,23 +867,6 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
         if code == '':
             pass
         elif code == 'initialize':
-            # Start up a GRPC client
-            client = GrpcClient(hostname=default_hostname,
-                                port=grpc_remote_client_port_default,
-                                logger=logger)
-            response = client.send(2)  # Error handles, returning ! on fail
-            if response == '!':
-                code = ''
-                video_pipe_out.send(('gui', 'video', 'no_conn_grpc'))
-            else:
-                logger.log('[@VPROC TCP]' + str(response))
-                response = request_to_value(str(response))
-            if response[0] == '@':
-                # Tell gui grpc for video is connected
-                video_pipe_out.send(('gui', 'video', 'conn_grpc'))
-                socket_port = int(response[1:])
-                code = 'start_socket'
-        if code == 'start_socket':
             socket_started = True
             video_pipe_out.send(('gui', 'video', 'conn_socket'))
             code = ''
