@@ -302,7 +302,52 @@ class Window(tk.Frame):
         self.mission_config_text_current = tk.Label(master=self.info_window, text='None', bd=0, anchor='w', bg='white', justify=tk.LEFT)
 
         # Telemetry Window
-
+        self.telemetry_window = tk.Frame(master=self.master, width=640, height=350, bg='white')
+        # Sensors
+        self.accelerometer_text = tk.Label(master=self.telemetry_window, text='Accel', bd=0, anchor='w', bg='white',
+                                           justify=tk.LEFT)
+        self.accelerometer_val = tk.Label(master=self.telemetry_window, text=str(
+            self.telemetry_current_state.sensors['accelerometer']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.magnetometer_text = tk.Label(master=self.telemetry_window, text='Mag', bd=0, anchor='w', bg='white',
+                                          justify=tk.LEFT)
+        self.magnetometer_val = tk.Label(master=self.telemetry_window, text=str(
+            self.telemetry_current_state.sensors['magnetometer']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.pressure_trans_text = tk.Label(master=self.telemetry_window, text='Pres_T', bd=0, anchor='w', bg='white',
+                                            justify=tk.LEFT)
+        self.pressure_trans_val = tk.Label(master=self.telemetry_window, text=str(
+            self.telemetry_current_state.sensors['pressure_transducer']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.gyroscope_text = tk.Label(master=self.telemetry_window, text='Gyro', bd=0, anchor='w', bg='white',
+                                       justify=tk.LEFT)
+        self.gyroscope_val = tk.Label(master=self.telemetry_window, text=str(
+            self.telemetry_current_state.sensors['gyroscope']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.voltmeter_text = tk.Label(master=self.telemetry_window, text='Volts', bd=0, anchor='w', bg='white',
+                                       justify=tk.LEFT)
+        self.voltmeter_val = tk.Label(master=self.telemetry_window, text=str(
+            self.telemetry_current_state.sensors['voltmeter']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.battery_current_text = tk.Label(master=self.telemetry_window, text='Bat_I', bd=0, anchor='w', bg='white',
+                                             justify=tk.LEFT)
+        self.battery_current_val = tk.Label(master=self.telemetry_window, text=str(
+            self.telemetry_current_state.sensors['battery_current']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.roll_text = tk.Label(master=self.telemetry_window, text='Roll', bd=0, anchor='w', bg='white',
+                                  justify=tk.LEFT)
+        self.roll_val = tk.Label(master=self.telemetry_window, text=str(
+            self.telemetry_current_state.sensors['roll']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.pitch_text = tk.Label(master=self.telemetry_window, text='Pitch', bd=0, anchor='w', bg='white',
+                                   justify=tk.LEFT)
+        self.pitch_val = tk.Label(master=self.telemetry_window, text=str(
+            self.telemetry_current_state.sensors['pitch']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.yaw_text = tk.Label(master=self.telemetry_window, text='Yaw', bd=0, anchor='w', bg='white',
+                                 justify=tk.LEFT)
+        self.yaw_val = tk.Label(master=self.telemetry_window, text=str(
+            self.telemetry_current_state.sensors['yaw']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.auto_button_text = tk.Label(master=self.telemetry_window, text='B_Auto', bd=0, anchor='w', bg='white',
+                                       justify=tk.LEFT)
+        self.auto_button_val = tk.Label(master=self.telemetry_window, text=str(
+            self.telemetry_current_state.sensors['auto_button']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.kill_button_text = tk.Label(master=self.telemetry_window, text='B_Kill', bd=0, anchor='w', bg='white',
+                                       justify=tk.LEFT)
+        self.kill_button_val = tk.Label(master=self.telemetry_window, text=str(
+            self.telemetry_current_state.sensors['kill_button']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         # Controller Window
 
         # Data I/O to other processes
@@ -419,6 +464,31 @@ class Window(tk.Frame):
         # Mission
         self.mission_config_text.grid(column=0, row=9, sticky=W, columnspan=2)
         self.mission_config_text_current.grid(column=2, row=9, sticky=W, columnspan=2)
+
+        # Telemetry Window
+        self.telemetry_window.grid(column=1, row=2)
+        self.accelerometer_text.grid(column=0, row=0, sticky=W)
+        self.accelerometer_val.grid(column=1, row=0, sticky=W)
+        self.magnetometer_text.grid(column=0, row=1, sticky=W)
+        self.magnetometer_val.grid(column=1, row=1, sticky=W)
+        self.pressure_trans_text.grid(column=0, row=2, sticky=W)
+        self.pressure_trans_val.grid(column=1, row=2, sticky=W)
+        self.gyroscope_text.grid(column=0, row=3, sticky=W)
+        self.gyroscope_val.grid(column=1, row=3, sticky=W)
+        self.voltmeter_text.grid(column=0, row=4, sticky=W)
+        self.voltmeter_val.grid(column=1, row=4, sticky=W)
+        self.battery_current_text.grid(column=0, row=5, sticky=W)
+        self.battery_current_val.grid(column=1, row=5, sticky=W)
+        self.roll_text.grid(column=0, row=6, sticky=W)
+        self.roll_val.grid(column=1, row=6, sticky=W)
+        self.pitch_text.grid(column=0, row=7, sticky=W)
+        self.pitch_val.grid(column=1, row=7, sticky=W)
+        self.yaw_text.grid(column=0, row=8, sticky=W)
+        self.yaw_val.grid(column=1, row=8, sticky=W)
+        self.auto_button_text.grid(column=0, row=9, sticky=W)
+        self.auto_button_val.grid(column=1, row=9, sticky=W)
+        self.kill_button_text.grid(column=0, row=10, sticky=W)
+        self.kill_button_val.grid(column=1, row=10, sticky=W)
 
     @staticmethod
     def diag_box(message):
@@ -714,6 +784,33 @@ class Window(tk.Frame):
             control_in.put((self.js.get_numaxes() + self.js.get_numbuttons()), self.js.get_hat(0))  # Hat
             self.pilot_pipe_out.send((control_in.tobytes()))
 
+    def update_telemetry(self):
+        """Updates the telemetry window.
+        """
+        if self.telemetry_socket_is_connected:
+            self.accelerometer_val.configure(self.accelerometer_val,
+                                             text=str(self.telemetry_current_state.sensors['accelerometer']))
+            self.magnetometer_val.configure(self.magnetometer_val,
+                                            text=str(self.telemetry_current_state.sensors['magnetometer']))
+            self.pressure_trans_val.configure(self.pressure_trans_val,
+                                             text=str(self.telemetry_current_state.sensors['pressure_transducer']))
+            self.gyroscope_val.configure(self.gyroscope_val,
+                                        text=str(self.telemetry_current_state.sensors['gyroscope']))
+            self.voltmeter_val.configure(self.voltmeter_val,
+                                        text=str(self.telemetry_current_state.sensors['voltmeter']))
+            self.battery_current_val.configure(self.battery_current_val,
+                                             text=str(self.telemetry_current_state.sensors['battery_current']))
+            self.roll_val.configure(self.roll_val,
+                                    text=str(self.telemetry_current_state.sensors['roll']))
+            self.pitch_val.configure(self.pitch_val,
+                                    text=str(self.telemetry_current_state.sensors['pitch']))
+            self.yaw_val.configure(self.yaw_val,
+                                   text=str(self.telemetry_current_state.sensors['yaw']))
+            self.auto_button_val.configure(self.auto_button_val,
+                                           text=str(self.telemetry_current_state.sensors['auto_button']))
+            self.kill_button_val.configure(self.kill_button_val,
+                                           text=str(self.telemetry_current_state.sensors['kill_button']))
+
     def read_pipe(self):
         """Checks input pipe for info from other processes, processes commands here
         """
@@ -756,6 +853,7 @@ class Window(tk.Frame):
         self.run_logger()
         self.update_frames()  # Update video frame
         self.send_controller_state()  # Send current inputs
+        self.update_telemetry()  # Update telemetry displayed
         # Update all button statuses
         self.update_button(self.cmd_status_button, self.cmd_connected)
         self.update_button(self.video_grpc_status_button, self.video_grpc_is_connected)
