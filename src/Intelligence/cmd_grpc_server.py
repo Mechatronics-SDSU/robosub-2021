@@ -34,7 +34,8 @@ SERVER_PORT = 50052
 class CommandGRPCServicer(cmd_pb2_grpc.CommandGRPCServicer):
     """Manages commands sent over grpc
     """
-    def __init__(self):
+    def __init__(self, pipe_out=None):
+        self.pipe_out = pipe_out
         self.started = True
         self.config = None
 
@@ -58,7 +59,8 @@ class CommandGRPCServicer(cmd_pb2_grpc.CommandGRPCServicer):
             print it out, but it can be used to set intelligence's configuration for this run
             and start the correct docker containters.
             '''
-            print(config)
+            if self.pipe_out is not None:
+                self.pipe_out.send(('main', 'cmd_grpc', config))
             return cmd_pb2.MsgReply(ack='2')
         else:  # If we just receive a code, send acknowledge
             return cmd_pb2.MsgReply(ack='1')
@@ -88,9 +90,10 @@ def main():
     print('Started cmd grpc server.')
     server.wait_for_termination()
 
-
+"""
 if __name__ == '__main__':
     main()
 else:
     print('Run me as main!')
     sys.exit()
+"""
