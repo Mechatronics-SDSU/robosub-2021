@@ -306,6 +306,8 @@ class Window(tk.Frame):
 
         # Telemetry Window
         self.telemetry_window = tk.Frame(master=self.master, width=640, height=350, bg='white')
+        self.telemetry_colpad = tk.Label(master=self.telemetry_window, text='Telemetry Data:', bd=0, anchor='w', bg='white',
+                                         justify=tk.LEFT)
         # Sensors
         self.accelerometer_text = tk.Label(master=self.telemetry_window, text='Accel', bd=0, anchor='w', bg='white',
                                            justify=tk.LEFT)
@@ -351,7 +353,17 @@ class Window(tk.Frame):
                                        justify=tk.LEFT)
         self.kill_button_val = tk.Label(master=self.telemetry_window, text=str(
             self.telemetry_current_state.sensors['kill_button']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+
         # Controller Window
+        self.controller_window = tk.Frame(master=self.master, width=640, height=350, bg='white')
+        # Controller inputs
+        self.current_control_inputs = None
+        self.ctrl_n_button = tk.Button(master=self.controller_window, text='  N  ', bg='white')
+        self.ctrl_s_button = tk.Button(master=self.controller_window, text='  S  ', bg='white')
+        self.ctrl_e_button = tk.Button(master=self.controller_window, text='  E  ', bg='white')
+        self.ctrl_w_button = tk.Button(master=self.controller_window, text='  W  ', bg='white')
+        self.ctrl_l1_button = tk.Button(master=self.controller_window, text=' L1  ', bg='white')
+        self.ctrl_r1_button = tk.Button(master=self.controller_window, text='  R1 ', bg='white')
 
         # Data I/O to other processes
         self.in_pipe = None
@@ -461,28 +473,38 @@ class Window(tk.Frame):
 
         # Telemetry Window
         self.telemetry_window.grid(column=1, row=2)
-        self.accelerometer_text.grid(column=0, row=0, sticky=W)
-        self.accelerometer_val.grid(column=1, row=0, sticky=W)
-        self.magnetometer_text.grid(column=0, row=1, sticky=W)
-        self.magnetometer_val.grid(column=1, row=1, sticky=W)
-        self.pressure_trans_text.grid(column=0, row=2, sticky=W)
-        self.pressure_trans_val.grid(column=1, row=2, sticky=W)
-        self.gyroscope_text.grid(column=0, row=3, sticky=W)
-        self.gyroscope_val.grid(column=1, row=3, sticky=W)
-        self.voltmeter_text.grid(column=0, row=4, sticky=W)
-        self.voltmeter_val.grid(column=1, row=4, sticky=W)
-        self.battery_current_text.grid(column=0, row=5, sticky=W)
-        self.battery_current_val.grid(column=1, row=5, sticky=W)
-        self.roll_text.grid(column=0, row=6, sticky=W)
-        self.roll_val.grid(column=1, row=6, sticky=W)
-        self.pitch_text.grid(column=0, row=7, sticky=W)
-        self.pitch_val.grid(column=1, row=7, sticky=W)
-        self.yaw_text.grid(column=0, row=8, sticky=W)
-        self.yaw_val.grid(column=1, row=8, sticky=W)
-        self.auto_button_text.grid(column=0, row=9, sticky=W)
-        self.auto_button_val.grid(column=1, row=9, sticky=W)
-        self.kill_button_text.grid(column=0, row=10, sticky=W)
-        self.kill_button_val.grid(column=1, row=10, sticky=W)
+        self.telemetry_colpad.grid(column=0, row=0, sticky=W, columnspan=2)
+        self.accelerometer_text.grid(column=0, row=1, sticky=W, columnspan=2)
+        self.accelerometer_val.grid(column=2, row=1, sticky=W)
+        self.magnetometer_text.grid(column=0, row=2, sticky=W, columnspan=2)
+        self.magnetometer_val.grid(column=2, row=2, sticky=W)
+        self.pressure_trans_text.grid(column=0, row=3, sticky=W, columnspan=2)
+        self.pressure_trans_val.grid(column=2, row=3, sticky=W)
+        self.gyroscope_text.grid(column=0, row=4, sticky=W, columnspan=2)
+        self.gyroscope_val.grid(column=2, row=4, sticky=W)
+        self.voltmeter_text.grid(column=0, row=5, sticky=W, columnspan=2)
+        self.voltmeter_val.grid(column=2, row=5, sticky=W)
+        self.battery_current_text.grid(column=0, row=6, sticky=W, columnspan=2)
+        self.battery_current_val.grid(column=2, row=6, sticky=W)
+        self.roll_text.grid(column=0, row=7, sticky=W, columnspan=2)
+        self.roll_val.grid(column=2, row=7, sticky=W)
+        self.pitch_text.grid(column=0, row=8, sticky=W, columnspan=2)
+        self.pitch_val.grid(column=2, row=8, sticky=W)
+        self.yaw_text.grid(column=0, row=9, sticky=W, columnspan=2)
+        self.yaw_val.grid(column=2, row=9, sticky=W)
+        self.auto_button_text.grid(column=0, row=10, sticky=W, columnspan=2)
+        self.auto_button_val.grid(column=2, row=10, sticky=W)
+        self.kill_button_text.grid(column=0, row=11, sticky=W, columnspan=2)
+        self.kill_button_val.grid(column=2, row=11, sticky=W)
+
+        # Controller Window
+        self.controller_window.grid(column=0, row=2)
+        self.ctrl_n_button.grid(column=1, row=0)
+        self.ctrl_s_button.grid(column=1, row=2)
+        self.ctrl_e_button.grid(column=2, row=1)
+        self.ctrl_w_button.grid(column=0, row=1)
+        self.ctrl_l1_button.grid(column=0, row=0)
+        self.ctrl_r1_button.grid(column=2, row=0)
 
     @staticmethod
     def diag_box(message):
@@ -776,7 +798,34 @@ class Window(tk.Frame):
             for i in range(self.js.get_numaxes(), self.js.get_numbuttons()):  # Buttons
                 control_in.put(i, self.js.get_button(i - self.js.get_numaxes()))
             control_in.put((self.js.get_numaxes() + self.js.get_numbuttons()), self.js.get_hat(0))  # Hat
+            self.current_control_inputs = control_in
             self.pilot_pipe_out.send((control_in.tobytes()))
+            """ BROKEN in testing with some other socket commented out until I can fix it
+            if self.ctrl_n_button.config('bg')[4] == 'white' and (1 == int(self.current_control_inputs[0, 9])):
+                self.ctrl_n_button.configure(self.ctrl_n_button, bg='red')
+            elif self.ctrl_n_button.config('bg')[4] == 'red' and (0 == int(self.current_control_inputs[0, 9])):
+                self.ctrl_n_button.configure(self.ctrl_n_button, bg='white')
+            if self.ctrl_s_button.config('bg')[4] == 'white' and (1 == int(self.current_control_inputs[0, 6])):
+                self.ctrl_s_button.configure(self.ctrl_s_button, bg='red')
+            elif self.ctrl_s_button.config('bg')[4] == 'red' and (0 == int(self.current_control_inputs[0, 6])):
+                self.ctrl_s_button.configure(self.ctrl_s_button, bg='white')
+            if self.ctrl_e_button.config('bg')[4] == 'white' and (1 == int(self.current_control_inputs[0, 7])):
+                self.ctrl_e_button.configure(self.ctrl_e_button, bg='red')
+            elif self.ctrl_e_button.config('bg')[4] == 'red' and (0 == int(self.current_control_inputs[0, 7])):
+                self.ctrl_e_button.configure(self.ctrl_e_button, bg='white')
+            if self.ctrl_w_button.config('bg')[4] == 'white' and (1 == int(self.current_control_inputs[0, 8])):
+                self.ctrl_w_button.configure(self.ctrl_w_button, bg='red')
+            elif self.ctrl_w_button.config('bg')[4] == 'red' and (0 == int(self.current_control_inputs[0, 8])):
+                self.ctrl_w_button.configure(self.ctrl_w_button, bg='white')
+            if self.ctrl_l1_button.config('bg')[4] == 'white' and (1 == int(self.current_control_inputs[0, 10])):
+                self.ctrl_l1_button.configure(self.ctrl_l1_button, bg='red')
+            elif self.ctrl_l1_button.config('bg')[4] == 'red' and (0 == int(self.current_control_inputs[0, 10])):
+                self.ctrl_l1_button.configure(self.ctrl_l1_button, bg='white')
+            if self.ctrl_r1_button.config('bg')[4] == 'white' and (1 == int(self.current_control_inputs[0, 11])):
+                self.ctrl_r1_button.configure(self.ctrl_r1_button, bg='red')
+            elif self.ctrl_r1_button.config('bg')[4] == 'red' and (0 == int(self.current_control_inputs[0, 11])):
+                self.ctrl_r1_button.configure(self.ctrl_r1_button, bg='white')
+            """
 
     def update_telemetry(self):
         """Updates the telemetry window.
