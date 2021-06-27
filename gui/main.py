@@ -392,18 +392,9 @@ class Window(tk.Frame):
         # Sockets
         config_text = Label(master=self.top_bar, text='Sockets: ', justify=LEFT, anchor='w')
         config_text.grid(column=4, row=0, sticky=W)
-        # Video
-        video_start_button = Button(master=self.top_bar, text='Video', justify=LEFT, anchor='w', command=self.init_video_socket)
-        video_start_button.grid(column=5, row=0, sticky=W)
-        # Logging
-        logging_start_button = Button(master=self.top_bar, text='Logging', justify=LEFT, anchor='w', command=self.init_logging_socket)
-        logging_start_button.grid(column=6, row=0, sticky=W)
-        # Telemetry
-        telemetry_start_button = Button(master=self.top_bar, text='Telemetry', justify=LEFT, anchor='w', command=self.init_telemetry_socket)
-        telemetry_start_button.grid(column=7, row=0, sticky=W)
-        # Pilot
-        pilot_start_button = Button(master=self.top_bar, text='Pilot', justify=LEFT, anchor='w', command=self.init_pilot_socket)
-        pilot_start_button.grid(column=8, row=0, sticky=W)
+        # All
+        start_all_sockets_button = Button(master=self.top_bar, text='Start', justify=LEFT, anchor='w', command=self.init_all_enabled_sockets)
+        start_all_sockets_button.grid(column=5, row=0, sticky=W)
         # Quit Button
         quit_button = Button(master=self.top_bar, text='Exit', justify=LEFT, anchor='w', command=self.client_exit)
         quit_button.grid(column=9, row=0, sticky=W)
@@ -663,37 +654,38 @@ class Window(tk.Frame):
             else:
                 self.diag_box('Error, config not set')
 
+    def init_all_enabled_sockets(self):
+        """Initializes all sockets enabled.
+        """
+        self.init_video_socket()
+        self.init_logging_socket()
+        self.init_telemetry_socket()
+        self.init_pilot_socket()
+        self.diag_box('Initialized all enabled sockets.')
+
     def init_video_socket(self):
         """Initializes video socket connection from gui
         """
         if self.video_socket_is_enabled.get():
             self.out_pipe.send(('video', 'gui', 'initialize'))
-        else:
-            self.diag_box('Video socket is not enabled!')
 
     def init_logging_socket(self):
         """Initializes logging socket connection from gui
         """
         if self.logging_socket_level.get() > 0:
             self.out_pipe.send(('logging', 'gui', 'initialize', self.remote_hostname, self.port_logging_socket))
-        else:
-            self.diag_box('Logging socket is not enabled!')
 
     def init_telemetry_socket(self):
         """Initializes telemetry socket connection from gui
         """
         if self.telemetry_socket_is_enabled.get():
             self.out_pipe.send(('telemetry', 'gui', 'initialize', self.remote_hostname, self.port_telemetry_socket))
-        else:
-            self.diag_box('Telemetry socket is not enabled!')
 
     def init_pilot_socket(self):
         """Initializes pilot socket connection from gui
         """
         if self.pilot_socket_is_enabled.get():
             self.out_pipe.send(('pilot', 'gui', 'initialize', self.port_pilot_socket, 'XBONE'))
-        else:
-            self.diag_box('Pilot socket is not enabled!')
 
     def set_hostname(self):
         """Sets the hostname of the remote client.
@@ -774,7 +766,6 @@ class Window(tk.Frame):
     def send_controller_state(self):
         """Sends current controller state to Pilot process
         """
-
         if self.js.get_init() and self.pilot_socket_is_connected:
             control_in = np.zeros(shape=(1,
                                     self.js.get_numaxes()
@@ -1086,13 +1077,12 @@ def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui):
                     started = True
         if started:
             # Controller
-            controller = ctrl_pilot.Controller(name=profile)
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 s.bind(('', port))
+                pilot_pipe_out.send(('gui', 'pilot', 'conn_socket'))
                 s.listen(5)
                 conn, address = s.accept()
-                pilot_pipe_out.send(('gui', 'pilot', 'conn_socket'))
                 while True:
                     result = conn.recvfrom(1024)[0]
                     if result == b'1':  # Client requests data
