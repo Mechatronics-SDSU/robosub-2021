@@ -153,6 +153,7 @@ def request_to_value(r):
 def main():
     """Driver Code for grpc server
     """
+    """
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     socket_route_guide_pb2_grpc.add_SocketGRPCServicer_to_server(StartSocket(), server)
     server.add_insecure_port('[::]:50051')
@@ -161,6 +162,9 @@ def main():
     print('[@SCKS] Socket server started.')
     server.wait_for_termination()
     print('[@SCKS] Server\'s closed.')
+    """
+    sc = SocketConnection()
+    sc.start()
 
 
 if __name__ == '__main__':
