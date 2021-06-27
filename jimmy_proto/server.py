@@ -12,6 +12,7 @@ from inference_dir.gate_detector import GateDetector
 from multiprocessing import Process
 import socket
 import docker
+import subprocess
 CLIENT = docker.from_env()
 
 
@@ -30,21 +31,10 @@ class Listener(buffer_pb2_grpc.Response_ServiceServicer):
 	def __init__(self):
 		buffer_pb2_grpc.Response_ServiceServicer.__init__(self)
 		self.p = None
-		containers_list = CLIENT.containers.list(all=True)
-		if not containers_list != "server":
-			self.container = False
-		else:
-			self.container = True
 
 
 	def Info(self, request, context):
-		if self.container == True:
-			containers_list = CLIENT.containers.list(all=True)
-			for cont in containers_list:
-			   	cont.remove(force=True)
-			   	self.container = False
-		elif self.container == False:
-			CLIENT.containers.run(name="server", command=None, image="ubuntu", detach=True)
+			#CLIENT.containers.run(name="server", command="sleep infinity", image="ubuntu:latest", detach=True)
 		retriever = request.send
 		decode = retriever.decode("utf-8")
 		if  decode == "start":

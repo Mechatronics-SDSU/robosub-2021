@@ -10,6 +10,7 @@ from inference_dir.gate_detector import GateDetector
 from multiprocessing import Process
 import docker
 import socket
+import subprocess
 CLIENT = docker.from_env()
 
 
@@ -29,25 +30,14 @@ cap = cv2.VideoCapture('files/Additional_Test_Video.mp4')
 tracking = {}
 
 class Spawn():
-	def __init__(self):
-		containers_list = CLIENT.containers.list(all=True)
-		if not containers_list != "client":
-			self.container = False
-		else:
-			self.container = True
+	def __init__(self):	
 		self.run()
 		
 		
 	def run(self):
 		channel = grpc.insecure_channel('localhost:50051')
 		stub = buffer_pb2_grpc.Response_ServiceStub(channel)
-		containers_list = CLIENT.containers.list(all=True)
-		if self.container == True:
-			for cont in containers_list:
-		   		cont.remove(force=True)
-		   		self.container = False
-		if self.container == False:
-			CLIENT.containers.run(name="client", command=None, image="ubuntu", detach=True)
+			#CLIENT.containers.run(name="client", command="sleep infinity", image="ubuntu:latest", detach=True)
 		response_string = b"start"
 		stub.Info(buffer_pb2.Send_Request(send=response_string))
 		term_socket()
