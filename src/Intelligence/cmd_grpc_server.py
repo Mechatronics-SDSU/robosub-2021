@@ -55,12 +55,10 @@ class CommandGRPCServicer(cmd_pb2_grpc.CommandGRPCServicer):
             config = cmd(socket_codes=[request.logging_code, request.video_code, request.telemetry_code],
                         pilot_control=request.pilot_control,
                         mission=request.mission)
-            '''Here we can do anything we want with config sent from client. In this case we
-            print it out, but it can be used to set intelligence's configuration for this run
-            and start the correct docker containters.
-            '''
+            # Pipe cmd to main
             if self.pipe_out is not None:
-                self.pipe_out.send(('main', 'cmd_grpc', config))
+                self.pipe_out.send(('main', 'cmd_grpc', config.gen_packet()))
+        # Send ack codes
             return cmd_pb2.MsgReply(ack='2')
         else:  # If we just receive a code, send acknowledge
             return cmd_pb2.MsgReply(ack='1')
