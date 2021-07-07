@@ -416,6 +416,15 @@ class Window(tk.Frame):
         self.text.place(x=0, y=0)
         self.logger.log('[@GUI] Logger Initialized.')
 
+        self.logger.log('  ___ ___  ___ _   _ ')
+        self.logger.log(' / __|   \\/ __| | | |')
+        self.logger.log(' \\__ \\ |) \\__ \\ |_| |')
+        self.logger.log(' |___/___/|___/\\___/ ')
+        self.logger.log(' _____         _       _               _         ')
+        self.logger.log('|     |___ ___| |_ ___| |_ ___ ___ ___|_|___ ___ ')
+        self.logger.log('| | | | -_|  _|   | .\'|  _|  _| . |   | |  _|_ -')
+        self.logger.log('|_|_|_|___|___|_|_|__,|_| |_| |___|_|_|_|___|___|')
+
         # Video Stream Window (GRPC/Socket)
         self.video_window.grid(column=1, row=1)
         # Info Window (Communications/Statuses)
