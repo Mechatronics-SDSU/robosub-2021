@@ -3,8 +3,10 @@
 
 Priveledged Port | Protocol |Function
 ---------------- | ---------------- | ----------------
-50001 | Socket | Video Stream (Inference)
-50002 | Socket | Logging Messages (Intelligence)
-50003 | Socket | Sensor Telemetry (Control)
-50004 | Socket | Pilot Input Controls (Control)
-50052 | GRPC | Host Command (Intelligence)
+50001 | Socket | Video Stream `HOST <-> Inference`
+50002 | Socket | Logging Messages `HOST <-> Intelligence`
+50003 | Socket | Sensor Telemetry `HOST <-> Control`
+50004 | Socket | Pilot Input Controls `HOST <-> Control`
+50051 | GRPC | Comms Intelligence and Inference `Intelligence <-> Inference`
+50052 | GRPC | Host Command `HOST <-> Intelligence`
+65432 | Socket | Video Pipe to Intelligence `Intelligence <- Inference`
