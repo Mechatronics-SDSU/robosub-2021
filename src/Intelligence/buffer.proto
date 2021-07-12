@@ -13,3 +13,4 @@ message Request_Response{
 service Response_Service{
 	rpc Info (Send_Request) returns (Request_Response) {}
 }
+
