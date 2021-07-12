@@ -303,9 +303,6 @@ class GateDetector:
 
             detected_tracking_boxes = self.merge_similar_tracking_boxes(detected_tracking_boxes)
             draw_detected_tracking_boxes(frame, detected_tracking_boxes, RED)
-
-        cv2.imshow("FLD", drawn_img)
-        cv2.imshow("Frame", frame)
         return detected_tracking_boxes
 
 
