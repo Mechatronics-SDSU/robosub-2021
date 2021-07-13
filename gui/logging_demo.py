@@ -32,15 +32,17 @@ Process Communication pathway:
 """
 
 import os
+import sys
 import multiprocessing as mp
 from multiprocessing import set_start_method, get_context
 import socket
 import logging
 import time
 
-import logger
-import ip_config
-ipconfig = ip_config.load_config()
+import src.utils.logger as logger
+import src.utils.ip_config as ip_config
+sys.modules['ip_config'] = ip_config
+ipconfig = ip_config.load_config_from_file('config.pickle')
 
 
 def sim_intelligence(pipe_to_router):
@@ -100,14 +102,16 @@ def out_router(ports, intelligence_pipe, inference_pipe, control_pipe):
     # Socket
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind(('', ports.logging_port))
-        s.listen(5)
+        s.bind(('', 50002))  # TODO change this back to using config.pickle, hard coded here because it breaks container
+        s.listen()
         conn, address = s.accept()
         while True:
             queue = mp.connection.wait([intelligence_pipe, inference_pipe, control_pipe], timeout=-1)
             if len(queue) > 0:
-                log = queue[0].recv()
-                conn.sendall(log)
+                result = conn.recvfrom(1024)[0]
+                if result == b'1':
+                    log = queue[0].recv()
+                    conn.sendall(log)
 
 
 def main():

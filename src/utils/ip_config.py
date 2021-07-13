@@ -4,7 +4,8 @@
 import pickle
 
 
-filename = 'config.pickle'
+filename = '/src/utils/config.pickle'
+# filename = 'config.pickle'
 
 
 class IPConfig:

@@ -21,8 +21,7 @@ import numpy as np
 import pygame
 
 
-started = True
-server_name = 'localhost'
+server_name = '127.0.0.1'
 port = 50004
 
 
@@ -100,20 +99,30 @@ class Controller:
 def run_client():
     """Client's driver code
     """
+    started = True
     # Controller
     controls = Controller(name='XBONE')
     # Socket
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.connect((server_name, port))
+        try:
+            s.connect((server_name, port))
+            started = True
+        except ConnectionRefusedError:
+            started = False
         while started:
             s.sendall(b'1')
-            data = s.recv(4096)
-            controls.set_state(np.frombuffer(data, dtype=float))
-            '''Here we can do whatever we want with this numpy array.
-            Here it is printed but it can be used for maestro control.
-            '''
-            print(str(controls.get_state()))
+            try:
+                data = s.recv(4096)
+            except ConnectionAbortedError:
+                started = False
+                data = None
+            if isinstance(data, bytes):
+                controls.set_state(np.frombuffer(data, dtype=float))
+                '''Here we can do whatever we want with this numpy array.
+                Here it is printed but it can be used for maestro control.
+                '''
+                print(str(controls.get_state()))
 
 
 def main(start=False):

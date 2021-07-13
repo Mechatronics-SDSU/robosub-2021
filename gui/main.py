@@ -76,11 +76,14 @@ import cv2
 # Internal
 import src.utils.cmd_pb2 as cmd_pb2
 import src.utils.cmd_pb2_grpc as cmd_pb2_grpc
-import src.utils.ip_config as ipc
+import src.utils.ip_config as ip_config
 import src.utils.logger as sub_logging
 import src.utils.telemetry as sensor_tel
 import src.utils.pilot as ctrl_pilot
 import src.utils.command_configuration as cmd
+
+
+system.modules['ip_config'] = ip_config
 
 # Command
 grpc_remote_client_port_default = '50051'
@@ -212,7 +215,7 @@ class Window(tk.Frame):
         self.port_pilot_socket = default_port_pilot_socket
         self.cfg_file_path = 'config.pickle'
         if os.path.exists(self.cfg_file_path):
-            ip = ipc.load_config()
+            ip = ip_config.load_config_from_file(self.cfg_file_path)
             self.port_command_grpc = ip.grpc_port
             self.port_video_socket = ip.video_port
             self.port_logging_socket = ip.logging_port
@@ -1082,6 +1085,7 @@ def logging_proc(logger, logging_pipe_in, logging_pipe_out):
                 logging_pipe_out.send(('gui', 'logging', 'conn_socket'))
                 while True:
                     # TODO add a check for mp connection here
+                    s.sendall(b'1')
                     data = s.recv(4096)
                     # Parse logs
                     log_list = log_parse(data)
@@ -1089,6 +1093,7 @@ def logging_proc(logger, logging_pipe_in, logging_pipe_out):
                     for i in range(len(log_list)):
                         lc.logging_queue.append(log_list[i])
                         logging_pipe_out.send(('gui', 'logging', lc.dequeue()))
+                    print(log_list)
 
 
 def telemetry_proc(logger, telemetry_pipe_in, telemetry_pipe_out):

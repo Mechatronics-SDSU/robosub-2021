@@ -17,7 +17,7 @@ from src.utils.command_configuration import CommandConfigurationPacket as cmdp
 from src.utils.logger import LoggerServer
 
 import src.utils.ip_config as ipc
-ip = ipc.load_config()
+ip = ipc.load_config_from_file('config.pickle')
 
 
 def video_process(pipe_in_from_main, pipe_out_to_main):
@@ -30,6 +30,8 @@ def logging_process(logging_pipe, pipe_in_from_main, pipe_out_to_main):
     """Logging work
     """
     started = False
+    pass
+    """  Note: ASD server port bind here messes with container. Commented out!
     while True:
         com = mp.connection.wait([pipe_in_from_main], timeout=-1)
         if len(com) > 0:
@@ -55,6 +57,7 @@ def logging_process(logging_pipe, pipe_in_from_main, pipe_out_to_main):
             message = logging_pipe.recv()
             if message[2] == 'log':
                 print(message[3])
+        """
 
 
 def telemetry_process(pipe_in_from_main, pipe_out_to_main):
