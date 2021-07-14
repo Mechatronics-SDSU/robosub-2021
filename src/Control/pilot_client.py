@@ -18,10 +18,9 @@ import sys
 import socket
 
 import numpy as np
-import pygame
 
 
-server_name = '127.0.0.1'
+server_name = '0.0.0.0'
 port = 50004
 
 
@@ -100,6 +99,7 @@ def run_client():
     """Client's driver code
     """
     started = True
+    data = None
     # Controller
     controls = Controller(name='XBONE')
     # Socket
@@ -117,11 +117,12 @@ def run_client():
             except ConnectionAbortedError:
                 started = False
                 data = None
-            if isinstance(data, bytes):
-                controls.set_state(np.frombuffer(data, dtype=float))
-                '''Here we can do whatever we want with this numpy array.
-                Here it is printed but it can be used for maestro control.
-                '''
+            if isinstance(data, bytes) and (data is (not None)):
+                if data != b'1':
+                    controls.set_state(np.frombuffer(data, dtype="float64"))
+                    '''Here we can do whatever we want with this numpy array.
+                    Here it is printed but it can be used for maestro control.
+                    '''
                 print(str(controls.get_state()))
 
 
