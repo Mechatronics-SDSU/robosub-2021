@@ -26,11 +26,6 @@ SERVER_ADDRESS = "localhost:23333"
 CLIENT_ID = 1
 start = False
 
-
-gate_detector = GateDetector()
-cap = cv2.VideoCapture('files/Additional_Test_Video.mp4')
-tracking = {}
-
 class Spawn():
 	def __init__(self):	
 		self.run()
