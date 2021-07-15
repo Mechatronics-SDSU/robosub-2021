@@ -1,5 +1,5 @@
 ## Diagram
- ![port_diagram](/img/docs_port_diag.png)
+ ![port_diagram](/img/ref_port_config_1.png)
 
 Priveledged Port | Protocol |Function
 ---------------- | ---------------- | ----------------
