@@ -6,7 +6,7 @@ The GUI uses Python's [Multiprocessing](https://docs.python.org/3/library/multip
 
 The table below refers to these pipes. Identifiers are not used in the code, but are used here to represent which pipes are the same pipe objects. Each Identifier has an input and an output associated with it. Communication is the main function of pipes to pass messages between processes, but other pipes exist. Their function is listed in the table.
 
-Pipe Identifier | Pipe Name | Process on this end of pipe | Pipe Type | | Function
+Pipe Identifier | Pipe Name | Process on this end of pipe | Pipe Type | Function
 ---------------- | ---------------- | ---------------- | ---------------- | ----------------
 0 | pipe_to_gui_from_router | Router | OUT | Communication
 0 | gui_pipe_in_from_router | GUI | IN | Communication
