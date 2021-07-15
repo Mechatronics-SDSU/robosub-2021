@@ -20,7 +20,7 @@ import socket
 import numpy as np
 
 
-server_name = '0.0.0.0'
+server_name = 'localhost'
 port = 50004
 
 
@@ -106,7 +106,8 @@ def run_client():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
-            s.connect((server_name, port))
+            s.connect((server_name, port))  # Refactor, put the server here with s.bind()
+            print('Connected. ')
             started = True
         except ConnectionRefusedError:
             started = False
@@ -117,13 +118,13 @@ def run_client():
             except ConnectionAbortedError:
                 started = False
                 data = None
-            if isinstance(data, bytes) and (data is (not None)):
+            if isinstance(data, bytes) and (data is not None):
                 if data != b'1':
                     controls.set_state(np.frombuffer(data, dtype="float64"))
                     '''Here we can do whatever we want with this numpy array.
                     Here it is printed but it can be used for maestro control.
                     '''
-                print(str(controls.get_state()))
+                    print(str(controls.get_state()))
 
 
 def main(start=False):
