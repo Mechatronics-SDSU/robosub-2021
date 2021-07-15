@@ -719,7 +719,7 @@ class Window(tk.Frame):
         """Initializes pilot socket connection from gui
         """
         if self.pilot_socket_is_enabled.get():
-            self.out_pipe.send(('pilot', 'gui', 'initialize', self.port_pilot_socket, 'XBONE'))
+            self.out_pipe.send(('pilot', 'gui', 'initialize', self.remote_hostname, self.port_pilot_socket))
 
     def set_hostname(self):
         """Sets the hostname of the remote client.
@@ -1126,7 +1126,7 @@ def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui):
     """Sends controller input to Control over TCP connection.
     """
     port = ''
-    profile = ''
+    hostname = ''
     last_input = np.zeros(shape=(1, 1))
     started = False
     while True:
@@ -1135,28 +1135,25 @@ def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui):
             result = conn[0].recv()
             if isinstance(result[2], str):
                 if result[2] == 'initialize':
-                    port = result[3]
-                    profile = result[4]
+                    hostname = result[3]
+                    port = result[4]
                     started = True
         if started:
             # Controller
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                s.bind(('', port))
+                s.connect((hostname, port))
                 pilot_pipe_out.send(('gui', 'pilot', 'conn_socket'))
-                s.listen(5)
-                conn, address = s.accept()
                 while True:
-                    result = conn.recvfrom(1024)[0]
-                    if result == b'1':  # Client requests data
-                        # Check queue for last input
+                    data = s.recv(1024)
+                    if data == b'1':
                         controller_input = mp.connection.wait([pipe_in_from_gui], timeout=-1)
                         if len(controller_input) > 0:
                             last_input = controller_input[len(controller_input)-1].recv()
-                            conn.sendall(last_input)
+                            s.sendall(last_input)
                             controller_input.clear()  # Clear input after sending latest
                         else:  # Send previous input
-                            conn.sendall(last_input)
+                            s.sendall(last_input)
 
 
 def router(logger,  # Gui logger
