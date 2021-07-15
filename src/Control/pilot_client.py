@@ -107,13 +107,15 @@ def run_client():
         s.bind(('', port))
         s.listen()
         conn, address = s.accept()
-        print('Listening...')
         while True:
-            conn.sendall(b'1')  # Server ready to receive
+            try:
+                conn.sendall(b'1')  # Server ready to receive
+            except BrokenPipeError:
+                break  # HOST closed, restart this function to listen for new connection
             try:
                 data = conn.recvfrom(4096)[0]
             except ConnectionAbortedError:
-                break  # Restart this function
+                break  # HOST closed, restart this function to listen for new connection
             if isinstance(data, bytes) and (data is not None):
                 controls.set_state(np.frombuffer(data, dtype=float))
                 '''Here we can do whatever we want with this numpy array.
