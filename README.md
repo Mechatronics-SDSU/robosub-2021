@@ -1,7 +1,7 @@
 # MechatronicsRobosub2021
 
 <div align="center">
-  <img src="img/mechatronics_logo.jpg">
+  <img src="img/readme_mechatronics_logo.png">
 </div>
 
 **`Info`** |
