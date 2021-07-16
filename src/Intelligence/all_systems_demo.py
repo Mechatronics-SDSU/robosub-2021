@@ -147,7 +147,7 @@ def cmd_process(pipe_in_from_main, pipe_out_to_main):
         if started:  # CMD GRPC server
             server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
             cmd_pb2_grpc.add_CommandGRPCServicer_to_server(grpc_server.CommandGRPCServicer(pipe_out=pipe_out_to_main), server)
-            server.add_insecure_port('[::]:' + str(ip.grpc_port))
+            server.add_insecure_port('[::]:' + str(50052))
             server.start()
             pipe_out_to_main.send(('main', 'cmd', 'started'))
             server.wait_for_termination()
