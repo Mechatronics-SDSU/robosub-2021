@@ -812,7 +812,9 @@ class Window(tk.Frame):
             control_in.put((self.js.get_numaxes() + self.js.get_numbuttons()), self.js.get_hat(0))  # Hat
             self.current_control_inputs = control_in
             self.pilot_pipe_out.send((control_in.tobytes()))
-            """ BROKEN in testing with some other socket commented out until I can fix it
+
+            # Button state update
+            # Note: comment this out if having trouble with gui freezing, means pilot can't connect
             if self.ctrl_n_button.config('bg')[4] == 'white' and (1 == int(self.current_control_inputs[0, 9])):
                 self.ctrl_n_button.configure(self.ctrl_n_button, bg='red')
             elif self.ctrl_n_button.config('bg')[4] == 'red' and (0 == int(self.current_control_inputs[0, 9])):
@@ -837,7 +839,6 @@ class Window(tk.Frame):
                 self.ctrl_r1_button.configure(self.ctrl_r1_button, bg='red')
             elif self.ctrl_r1_button.config('bg')[4] == 'red' and (0 == int(self.current_control_inputs[0, 11])):
                 self.ctrl_r1_button.configure(self.ctrl_r1_button, bg='white')
-            """
 
     def update_telemetry(self):
         """Updates the telemetry window.
@@ -1019,6 +1020,7 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
     socket_started = False
     hostname = ''
     port = ''
+    server_conn = False
     while True:
         # Wait for this process to receive info from the pipe, read it in when it does
         conn = mp.connection.wait([video_pipe_in], timeout=-1)
@@ -1031,7 +1033,6 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
             pass
         elif code == 'initialize':
             socket_started = True
-            video_pipe_out.send(('gui', 'video', 'conn_socket'))
             code = ''
         elif code == 'stop_socket':
             socket_started = False
@@ -1040,20 +1041,40 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
         if socket_started:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                s.connect((hostname, port))
+                try:
+                    s.connect((hostname, port))
+                    server_conn = True
+                    video_pipe_out.send(('gui', 'video', 'conn_socket'))
+                except ConnectionRefusedError:
+                    if os.name == 'nt':
+                        logger.log('[@VID] WARNING: Attempted to start video on Windows. Only works on Linux.')
+                    else:
+                        logger.log('[@VID] ERROR: Failed to connect to video socket.')
+                    server_conn = False
                 data = b''
                 payload_size = struct.calcsize('>L')
                 # Get frame data and send to video_stream_out
-                while True:
-                    s.sendall(b'1')
+                while server_conn:
+                    try:
+                        s.sendall(b'1')
+                    except ConnectionAbortedError:
+                        server_conn = False
+                        break
                     while len(data) < payload_size:
-                        data += s.recv(4096)
-
+                        try:
+                            data += s.recv(4096)
+                        except ConnectionAbortedError:
+                            server_conn = False
+                            break
                     packed_msg_size = data[:payload_size]
                     data = data[payload_size:]
                     msg_size = struct.unpack('>L', packed_msg_size)[0]
                     while len(data) < msg_size:
-                        data += s.recv(4096)
+                        try:
+                            data += s.recv(4096)
+                        except ConnectionAbortedError:
+                            server_conn = False
+                            break
                     frame_data = data[:msg_size]
                     data = data[msg_size:]
                     frame = pickle.loads(frame_data, fix_imports=True, encoding='bytes')
@@ -1068,6 +1089,7 @@ def logging_proc(logger, logging_pipe_in, logging_pipe_out):
     hostname = ''
     port = ''
     started = False
+    server_conn = False
     while True:
         conn = mp.connection.wait([logging_pipe_in], timeout=-1)
         if len(conn) > 0:
@@ -1080,19 +1102,28 @@ def logging_proc(logger, logging_pipe_in, logging_pipe_out):
             lc = sub_logging.LoggerClient(save_logs=False)
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                s.connect((hostname, port))
-                logging_pipe_out.send(('gui', 'logging', 'conn_socket'))
-                while True:
-                    # TODO add a check for mp connection here
-                    s.sendall(b'1')
-                    data = s.recv(4096)
-                    # Parse logs
-                    log_list = log_parse(data)
-                    # Send to GUI
-                    for i in range(len(log_list)):
-                        lc.logging_queue.append(log_list[i])
-                        logging_pipe_out.send(('gui', 'logging', lc.dequeue()))
-                    print(log_list)
+                try:
+                    s.connect((hostname, port))
+                    server_conn = True
+                    logging_pipe_out.send(('gui', 'logging', 'conn_socket'))
+                except ConnectionRefusedError:
+                    server_conn = False
+                while server_conn:
+                    try:
+                        s.sendall(b'1')
+                    except ConnectionAbortedError:
+                        server_conn = False
+                        break
+                    try:
+                        data = s.recv(4096)
+                        # Parse logs
+                        log_list = log_parse(data)
+                        # Send to GUI
+                        for i in range(len(log_list)):
+                            lc.logging_queue.append(log_list[i])
+                            logging_pipe_out.send(('gui', 'logging', lc.dequeue()))
+                    except ConnectionAbortedError:
+                        server_conn = False
 
 
 def telemetry_proc(logger, telemetry_pipe_in, telemetry_pipe_out):
@@ -1101,6 +1132,7 @@ def telemetry_proc(logger, telemetry_pipe_in, telemetry_pipe_out):
     hostname = ''
     port = ''
     started = False
+    server_conn = False
     while True:
         conn = mp.connection.wait([telemetry_pipe_in], timeout=-1)
         if len(conn) > 0:
@@ -1112,22 +1144,33 @@ def telemetry_proc(logger, telemetry_pipe_in, telemetry_pipe_out):
         if started:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                s.connect((hostname, port))
-                telemetry_pipe_out.send(('gui', 'telemetry', 'conn_socket'))
-                while True:
-                    # TODO add a check for mp connection here
-                    s.sendall(b'1')
-                    data = s.recv(4096)
-                    telemetry_pipe_out.send(('gui', 'telemetry', data))
+                try:
+                    s.connect((hostname, port))
+                    server_conn = True
+                    telemetry_pipe_out.send(('gui', 'telemetry', 'conn_socket'))
+                except ConnectionRefusedError:
+                    server_conn = False
+                while server_conn:
+                    try:
+                        s.sendall(b'1')
+                    except ConnectionAbortedError:
+                        server_conn = False
+                        break
+                    try:
+                        data = s.recv(4096)
+                        telemetry_pipe_out.send(('gui', 'telemetry', data))
+                    except ConnectionAbortedError:
+                        server_conn = False
 
 
 def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui):
     """Sends controller input to Control over TCP connection.
     """
-    port = ''
     hostname = ''
+    port = ''
     last_input = np.zeros(shape=(1, 1))
     started = False
+    server_conn = False
     while True:
         conn = mp.connection.wait([pilot_pipe_in], timeout=-1)
         if len(conn) > 0:
@@ -1141,18 +1184,32 @@ def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui):
             # Controller
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                s.connect((hostname, port))
-                pilot_pipe_out.send(('gui', 'pilot', 'conn_socket'))
-                while True:
-                    data = s.recv(1024)
+                try:
+                    s.connect((hostname, port))
+                    server_conn = True
+                    pilot_pipe_out.send(('gui', 'pilot', 'conn_socket'))
+                except ConnectionRefusedError:
+                    server_conn = False
+                while server_conn:
+                    try:
+                        data = s.recv(1024)
+                    except ConnectionAbortedError:
+                        server_conn = False
                     if data == b'1':
                         controller_input = mp.connection.wait([pipe_in_from_gui], timeout=-1)
                         if len(controller_input) > 0:
                             last_input = controller_input[len(controller_input)-1].recv()
-                            s.sendall(last_input)
+                            try:
+                                s.sendall(last_input)
+                            except ConnectionAbortedError:
+                                server_conn = False
+                                break
                             controller_input.clear()  # Clear input after sending latest
                         else:  # Send previous input
                             s.sendall(last_input)
+                controller_input = mp.connection.wait([pipe_in_from_gui], timeout=-1)
+                if len(controller_input) > 0:
+                    controller_input.clear()
 
 
 def router(logger,  # Gui logger

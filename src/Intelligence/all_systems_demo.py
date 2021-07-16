@@ -9,6 +9,7 @@ from multiprocessing import get_context, set_start_method
 import os
 import socket
 import logging
+import docker
 
 import src.Intelligence.cmd_grpc_server as grpc_server
 import src.utils.cmd_pb2_grpc as cmd_pb2_grpc
@@ -19,19 +20,13 @@ from src.utils.logger import LoggerServer
 import src.utils.ip_config as ipc
 ip = ipc.load_config_from_file('config.pickle')
 
+docker_client = docker.from_env()
+
 
 def video_process(pipe_in_from_main, pipe_out_to_main):
     """Video work
     """
     started = False
-
-
-def logging_process(logging_pipe, pipe_in_from_main, pipe_out_to_main):
-    """Logging work
-    """
-    started = False
-    pass
-    """  Note: ASD server port bind here messes with container. Commented out!
     while True:
         com = mp.connection.wait([pipe_in_from_main], timeout=-1)
         if len(com) > 0:
@@ -39,25 +34,50 @@ def logging_process(logging_pipe, pipe_in_from_main, pipe_out_to_main):
             if message[1] == 'main':
                 if message[2] == 'initialize':
                     started = True
-        if started:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                s.bind(('', ip.logging_port))
-                print('listening on ' + str(ip.logging_port))
-                s.listen(5)
-                conn, address = s.accept()
-                while started:
-                    queue = mp.connection.wait([logging_pipe, pipe_in_from_main], timeout=-1)
-                    if len(queue) > 0:  # Got a log to send or command from main
-                        message = queue[0].recv()
-                        if message[2] == 'log':
-                            conn.sendall(message[3])
-        if not started and logging_pipe.poll():
-            # If we have something to log but aren't processing info print it
-            message = logging_pipe.recv()
-            if message[2] == 'log':
-                print(message[3])
-        """
+                    break
+    if started:
+        container = None
+        containers = docker_client.containers.list(all=True)
+        for i in range(len(containers)):
+            if (containers[i].name == 'inf_video') and (os.name != 'nt'):  # Video only works on linux
+                container = containers[i]
+            elif (containers[i].name == 'inf_video') and (os.name == 'nt'):
+                started = False
+                break
+        if container is not None:  # Start it
+            container.start()
+        while started:
+            queue = mp.connection.wait([pipe_in_from_main], timeout=-1)
+            if len(queue) > 0:
+                message = queue[0].recv()
+                print(message)  # Can do other stuff here like modify container
+
+
+def logging_process(logging_pipe, pipe_in_from_main, pipe_out_to_main):
+    """Logging work
+    """
+    started = False
+    while True:
+        com = mp.connection.wait([pipe_in_from_main], timeout=-1)
+        if len(com) > 0:
+            message = com[0].recv()
+            if message[1] == 'main':
+                if message[2] == 'initialize':
+                    started = True
+                    break
+    if started:
+        container = None
+        containers = docker_client.containers.list(all=True)
+        for i in range(len(containers)):
+            if containers[i].name == 'int_logging':  # Found our container
+                container = containers[i]
+        if container is not None:  # Start it
+            container.start()
+        while started:
+            queue = mp.connection.wait([logging_pipe, pipe_in_from_main], timeout=-1)
+            if len(queue) > 0:
+                message = queue[0].recv()
+                print(message)  # Can do other stuff here like modify container
 
 
 def telemetry_process(pipe_in_from_main, pipe_out_to_main):
@@ -65,7 +85,26 @@ def telemetry_process(pipe_in_from_main, pipe_out_to_main):
     """
     started = False
     while True:
-        pass
+        com = mp.connection.wait([pipe_in_from_main], timeout=-1)
+        if len(com) > 0:
+            message = com[0].recv()
+            if message[1] == 'main':
+                if message[2] == 'initialize':
+                    started = True
+                    break
+    if started:
+        container = None
+        containers = docker_client.containers.list(all=True)
+        for i in range(len(containers)):
+            if containers[i].name == 'ctrl_telemetry':  # Found our container
+                container = containers[i]
+        if container is not None:  # Start it
+            container.start()
+        while started:
+            queue = mp.connection.wait([pipe_in_from_main], timeout=-1)
+            if len(queue) > 0:
+                message = queue[0].recv()
+                print(message)  # Can do other stuff here like modify container
 
 
 def pilot_process(pipe_in_from_main, pipe_out_to_main):
@@ -73,7 +112,26 @@ def pilot_process(pipe_in_from_main, pipe_out_to_main):
     """
     started = False
     while True:
-        pass
+        com = mp.connection.wait([pipe_in_from_main], timeout=-1)
+        if len(com) > 0:
+            message = com[0].recv()
+            if message[1] == 'main':
+                if message[2] == 'initialize':
+                    started = True
+                    break
+    if started:
+        container = None
+        containers = docker_client.containers.list(all=True)
+        for i in range(len(containers)):
+            if containers[i].name == 'ctrl_pilot':  # Found our container
+                container = containers[i]
+        if container is not None:  # Start it
+            container.start()
+        while started:
+            queue = mp.connection.wait([pipe_in_from_main], timeout=-1)
+            if len(queue) > 0:
+                message = queue[0].recv()
+                print(message)  # Can do other stuff here like modify container
 
 
 def cmd_process(pipe_in_from_main, pipe_out_to_main):
