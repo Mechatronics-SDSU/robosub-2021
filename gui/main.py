@@ -183,14 +183,19 @@ class LoggerWrapper:
         self.queue = mp.Queue()
         self.add_timestamp = showtime
 
-    def log(self, string):
+    def log(self, string, strip=True):
         """Logs the string
         :param string: Adds to logger queue
+        :param strip: Whether to strip newlines
         """
-        if self.add_timestamp:
+        if self.add_timestamp and (strip is True):
             self.queue.put(str(datetime.now().strftime('[%H:%M:%S]')) + str(string.strip()) + '\n')
-        else:
+        elif self.add_timestamp and (strip is True):
+            self.queue.put(str(datetime.now().strftime('[%H:%M:%S]')) + str(string) + '\n')
+        elif (not self.add_timestamp) and (strip is False):
             self.queue.put(str(string.strip()) + '\n')
+        else:
+            self.queue.put(str(string) + '\n')
 
     def dequeue(self):
         """Removes first element from queue
@@ -309,52 +314,57 @@ class Window(tk.Frame):
 
         # Telemetry Window
         self.telemetry_window = tk.Frame(master=self.master, width=640, height=350, bg='white')
-        self.telemetry_colpad = tk.Label(master=self.telemetry_window, text='Telemetry Data:', bd=0, anchor='w', bg='white',
+        self.telemetry_window_names = tk.Frame(master=self.telemetry_window)
+        self.telemetry_window_values = tk.Frame(master=self.telemetry_window)
+        self.telemetry_colpad = tk.Label(master=self.telemetry_window_names, text='Telemetry Data:', bd=0, anchor='w', bg='white',
+                                         justify=tk.LEFT)
+        self.telemetry_colpad_2 = tk.Label(master=self.telemetry_window_values, text='          ', bd=0, anchor='w',
+                                         bg='white',
                                          justify=tk.LEFT)
         # Sensors
-        self.accelerometer_text = tk.Label(master=self.telemetry_window, text='Accel', bd=0, anchor='w', bg='white',
+        self.accelerometer_text = tk.Label(master=self.telemetry_window_names, text='Accelerometer', bd=0, anchor='w', bg='white',
                                            justify=tk.LEFT)
-        self.accelerometer_val = tk.Label(master=self.telemetry_window, text=str(
+        self.accelerometer_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['accelerometer']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.magnetometer_text = tk.Label(master=self.telemetry_window, text='Mag', bd=0, anchor='w', bg='white',
+        self.magnetometer_text = tk.Label(master=self.telemetry_window_names, text='Magnetometer', bd=0, anchor='w', bg='white',
                                           justify=tk.LEFT)
-        self.magnetometer_val = tk.Label(master=self.telemetry_window, text=str(
+        self.magnetometer_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['magnetometer']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.pressure_trans_text = tk.Label(master=self.telemetry_window, text='Pres_T', bd=0, anchor='w', bg='white',
+        self.pressure_trans_text = tk.Label(master=self.telemetry_window_names, text='Pressure_Transducer', bd=0, anchor='w', bg='white',
                                             justify=tk.LEFT)
-        self.pressure_trans_val = tk.Label(master=self.telemetry_window, text=str(
+        self.pressure_trans_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['pressure_transducer']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.gyroscope_text = tk.Label(master=self.telemetry_window, text='Gyro', bd=0, anchor='w', bg='white',
+        self.gyroscope_text = tk.Label(master=self.telemetry_window_names, text='Gyroscope', bd=0, anchor='w', bg='white',
                                        justify=tk.LEFT)
-        self.gyroscope_val = tk.Label(master=self.telemetry_window, text=str(
+        self.gyroscope_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['gyroscope']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.voltmeter_text = tk.Label(master=self.telemetry_window, text='Volts', bd=0, anchor='w', bg='white',
+        self.voltmeter_text = tk.Label(master=self.telemetry_window_names, text='Voltmeter', bd=0, anchor='w', bg='white',
                                        justify=tk.LEFT)
-        self.voltmeter_val = tk.Label(master=self.telemetry_window, text=str(
+        self.voltmeter_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['voltmeter']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.battery_current_text = tk.Label(master=self.telemetry_window, text='Bat_I', bd=0, anchor='w', bg='white',
+        self.battery_current_text = tk.Label(master=self.telemetry_window_names, text='Battery_Current', bd=0, anchor='w', bg='white',
                                              justify=tk.LEFT)
-        self.battery_current_val = tk.Label(master=self.telemetry_window, text=str(
+        self.battery_current_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['battery_current']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.roll_text = tk.Label(master=self.telemetry_window, text='Roll', bd=0, anchor='w', bg='white',
+        self.roll_text = tk.Label(master=self.telemetry_window_names, text='Roll', bd=0, anchor='w', bg='white',
                                   justify=tk.LEFT)
-        self.roll_val = tk.Label(master=self.telemetry_window, text=str(
+        self.roll_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['roll']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.pitch_text = tk.Label(master=self.telemetry_window, text='Pitch', bd=0, anchor='w', bg='white',
+        self.pitch_text = tk.Label(master=self.telemetry_window_names, text='Pitch', bd=0, anchor='w', bg='white',
                                    justify=tk.LEFT)
-        self.pitch_val = tk.Label(master=self.telemetry_window, text=str(
+        self.pitch_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['pitch']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.yaw_text = tk.Label(master=self.telemetry_window, text='Yaw', bd=0, anchor='w', bg='white',
+        self.yaw_text = tk.Label(master=self.telemetry_window_names, text='Yaw', bd=0, anchor='w', bg='white',
                                  justify=tk.LEFT)
-        self.yaw_val = tk.Label(master=self.telemetry_window, text=str(
+        self.yaw_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['yaw']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.auto_button_text = tk.Label(master=self.telemetry_window, text='B_Auto', bd=0, anchor='w', bg='white',
-                                       justify=tk.LEFT)
-        self.auto_button_val = tk.Label(master=self.telemetry_window, text=str(
+        self.auto_button_text = tk.Label(master=self.telemetry_window_names, text='Button_Auto', bd=0, anchor='w', bg='white',
+                                         justify=tk.LEFT)
+        self.auto_button_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['auto_button']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.kill_button_text = tk.Label(master=self.telemetry_window, text='B_Kill', bd=0, anchor='w', bg='white',
-                                       justify=tk.LEFT)
-        self.kill_button_val = tk.Label(master=self.telemetry_window, text=str(
+        self.kill_button_text = tk.Label(master=self.telemetry_window_names, text='Button_Kill', bd=0, anchor='w', bg='white',
+                                         justify=tk.LEFT)
+        self.kill_button_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['kill_button']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
 
         # Controller Window
@@ -417,16 +427,7 @@ class Window(tk.Frame):
         # Logging Window
         self.logging_window.grid(column=0, row=1)
         self.text.place(x=0, y=0)
-        self.logger.log('[@GUI] Logger Initialized.')
-
-        self.logger.log('  ___ ___  ___ _   _ ')
-        self.logger.log(' / __|   \\/ __| | | |')
-        self.logger.log(' \\__ \\ |) \\__ \\ |_| |')
-        self.logger.log(' |___/___/|___/\\___/ ')
-        self.logger.log(' _____         _       _               _         ')
-        self.logger.log('|     |___ ___| |_ ___| |_ ___ ___ ___|_|___ ___ ')
-        self.logger.log('| | | | -_|  _|   | .\'|  _|  _| . |   | |  _|_ -')
-        self.logger.log('|_|_|_|___|___|_|_|__,|_| |_| |___|_|_|_|___|___|')
+        self.logger.log('[Info]: Logger Initialized.')
 
         # Video Stream Window (GRPC/Socket)
         self.video_window.grid(column=1, row=1)
@@ -485,29 +486,32 @@ class Window(tk.Frame):
 
         # Telemetry Window
         self.telemetry_window.grid(column=1, row=2)
+        self.telemetry_window_names.grid(column=0, row=0)
+        self.telemetry_window_values.grid(column=1, row=0)
         self.telemetry_colpad.grid(column=0, row=0, sticky=W, columnspan=2)
+        self.telemetry_colpad_2.grid(column=0, row=0, sticky=W)
         self.accelerometer_text.grid(column=0, row=1, sticky=W, columnspan=2)
-        self.accelerometer_val.grid(column=2, row=1, sticky=W)
+        self.accelerometer_val.grid(column=0, row=1, sticky=W)
         self.magnetometer_text.grid(column=0, row=2, sticky=W, columnspan=2)
-        self.magnetometer_val.grid(column=2, row=2, sticky=W)
+        self.magnetometer_val.grid(column=0, row=2, sticky=W)
         self.pressure_trans_text.grid(column=0, row=3, sticky=W, columnspan=2)
-        self.pressure_trans_val.grid(column=2, row=3, sticky=W)
+        self.pressure_trans_val.grid(column=0, row=3, sticky=W)
         self.gyroscope_text.grid(column=0, row=4, sticky=W, columnspan=2)
-        self.gyroscope_val.grid(column=2, row=4, sticky=W)
+        self.gyroscope_val.grid(column=0, row=4, sticky=W)
         self.voltmeter_text.grid(column=0, row=5, sticky=W, columnspan=2)
-        self.voltmeter_val.grid(column=2, row=5, sticky=W)
+        self.voltmeter_val.grid(column=0, row=5, sticky=W)
         self.battery_current_text.grid(column=0, row=6, sticky=W, columnspan=2)
-        self.battery_current_val.grid(column=2, row=6, sticky=W)
+        self.battery_current_val.grid(column=0, row=6, sticky=W)
         self.roll_text.grid(column=0, row=7, sticky=W, columnspan=2)
-        self.roll_val.grid(column=2, row=7, sticky=W)
+        self.roll_val.grid(column=0, row=7, sticky=W)
         self.pitch_text.grid(column=0, row=8, sticky=W, columnspan=2)
-        self.pitch_val.grid(column=2, row=8, sticky=W)
+        self.pitch_val.grid(column=0, row=8, sticky=W)
         self.yaw_text.grid(column=0, row=9, sticky=W, columnspan=2)
-        self.yaw_val.grid(column=2, row=9, sticky=W)
+        self.yaw_val.grid(column=0, row=9, sticky=W)
         self.auto_button_text.grid(column=0, row=10, sticky=W, columnspan=2)
-        self.auto_button_val.grid(column=2, row=10, sticky=W)
+        self.auto_button_val.grid(column=0, row=10, sticky=W)
         self.kill_button_text.grid(column=0, row=11, sticky=W, columnspan=2)
-        self.kill_button_val.grid(column=2, row=11, sticky=W)
+        self.kill_button_val.grid(column=0, row=11, sticky=W)
 
         # Controller Window
         self.controller_window.grid(column=0, row=2)
@@ -725,8 +729,14 @@ class Window(tk.Frame):
         """Sets the hostname of the remote client.
         """
         prompt = simpledialog.askstring('Input', 'Set the remote hostname here:', parent=self.master)
-        self.remote_hostname = prompt
-        self.info_all_comms_text.configure(self.info_all_comms_text, text='COMMS @' + self.remote_hostname)
+        if (isinstance(prompt, str)) and (prompt != ''):
+            self.remote_hostname = prompt
+            self.info_all_comms_text.configure(self.info_all_comms_text, text='COMMS @' + self.remote_hostname)
+            self.logger.log('[Info]: Set IP to ' + prompt)
+        else:
+            self.remote_hostname = default_hostname
+            self.info_all_comms_text.configure(self.info_all_comms_text, text='COMMS @' + self.remote_hostname)
+            self.logger.log('[Warn]: Attempt to pass invalid ip address, defaulting to localhost.')
 
     def run_logger(self):
         """Adds the first element in the queue to the logs.
@@ -1263,7 +1273,25 @@ def main():
     pipe_to_router_from_gui, pipe_in_from_gui = context.Pipe()
     gui_proc = context.Process(target=gui_proc_main, args=(gui_pipe_in_from_router, pipe_to_router_from_gui, gui_logger, pipe_in_from_video_stream, pipe_to_pilot_from_gui))
     gui_proc.start()
-    gui_logger.log('[@GUI] Gui Initialized.')  # Log to Gui from main process
+    gui_logger.log('[Info]: Gui Initialized.')  # Log to Gui from main process
+    gui_logger.log('  ___ ___  ___ _   _ ', strip=False)
+    print('  ___ ___  ___ _   _ ')
+    gui_logger.log(' / __|   \\/ __| | | |', strip=False)
+    print(' / __|   \\/ __| | | |')
+    gui_logger.log(' \\__ \\ |) \\__ \\ |_| |', strip=False)
+    print(' \\__ \\ |) \\__ \\ |_| |')
+    gui_logger.log(' |___/___/|___/\\___/ ', strip=False)
+    print(' |___/___/|___/\\___/ ')
+    gui_logger.log(' _____         _       _               _         ', strip=False)
+    print(' _____         _       _               _         ')
+    gui_logger.log('|     |___ ___| |_ ___| |_ ___ ___ ___|_|___ ___ ', strip=False)
+    print('|     |___ ___| |_ ___| |_ ___ ___ ___|_|___ ___ ')
+    gui_logger.log('| | | | -_|  _|   | .\'|  _|  _| . |   | |  _|_ -', strip=False)
+    print('| | | | -_|  _|   | .\'|  _|  _| . |   | |  _|_ -')
+    gui_logger.log('|_|_|_|___|___|_|_|__,|_| |_| |___|_|_|_|___|___|', strip=False)
+    print('|_|_|_|___|___|_|_|__,|_| |_| |___|_|_|_|___|___|')
+    gui_logger.log(' ', strip=False)
+    print(' ')
 
     # Video socket
     pipe_to_video_from_router, vid_pipe_in_from_router = context.Pipe()
