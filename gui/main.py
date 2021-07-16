@@ -701,7 +701,7 @@ class Window(tk.Frame):
         """Initializes video socket connection from gui
         """
         if self.video_socket_is_enabled.get():
-            self.out_pipe.send(('video', 'gui', 'initialize'))
+            self.out_pipe.send(('video', 'gui', 'initialize', self.remote_hostname, self.port_video_socket))
 
     def init_logging_socket(self):
         """Initializes logging socket connection from gui
@@ -1013,21 +1013,20 @@ def video_proc_udp(logger, video_pipe_in, video_pipe_out, video_stream_out):
 
 def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
     """Video socket driver code, running on a TCP connection.
-    Notes:
-        This is first establishes ITS OWN grpc conection when the pipe sends in a request to start.
-        This is known as the 'video_grpc' connection on port 50051.
-        This will be changed later so the socket connection is enabled directly.
     """
     code = ''
     client = None
     socket_started = False
-    socket_port = 50001
+    hostname = ''
+    port = ''
     while True:
         # Wait for this process to receive info from the pipe, read it in when it does
         conn = mp.connection.wait([video_pipe_in], timeout=-1)
         if len(conn) > 0:
-            code = str(conn[0].recv()[2])
-            print('video_proc_tcp received :' + str(code))
+            result = conn[0].recv()
+            code = str(result[2])
+            hostname = result[3]
+            port = result[4]
         if code == '':
             pass
         elif code == 'initialize':
@@ -1041,7 +1040,7 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
         if socket_started:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                s.connect((default_hostname, socket_port))
+                s.connect((hostname, port))
                 data = b''
                 payload_size = struct.calcsize('>L')
                 # Get frame data and send to video_stream_out
