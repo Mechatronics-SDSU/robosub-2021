@@ -52,6 +52,9 @@ import multiprocessing as mp
 from multiprocessing import set_start_method, get_context
 import os
 import sys as system  # sys is some other import
+import math
+
+import PIL.Image
 import grpc
 import socket
 from datetime import datetime
@@ -369,14 +372,27 @@ class Window(tk.Frame):
 
         # Controller Window
         self.controller_window = tk.Frame(master=self.master, width=640, height=350, bg='white')
+        self.controller_window_buttons = tk.Frame(master=self.controller_window, width=640, height=350, bg='white')
+        self.controller_window_joysticks = tk.Frame(master=self.controller_window)
         # Controller inputs
         self.current_control_inputs = None
-        self.ctrl_n_button = tk.Button(master=self.controller_window, text='  N  ', bg='white')
-        self.ctrl_s_button = tk.Button(master=self.controller_window, text='  S  ', bg='white')
-        self.ctrl_e_button = tk.Button(master=self.controller_window, text='  E  ', bg='white')
-        self.ctrl_w_button = tk.Button(master=self.controller_window, text='  W  ', bg='white')
-        self.ctrl_l1_button = tk.Button(master=self.controller_window, text=' L1  ', bg='white')
-        self.ctrl_r1_button = tk.Button(master=self.controller_window, text='  R1 ', bg='white')
+        self.ctrl_n_button = tk.Button(master=self.controller_window_buttons, text='  N  ', bg='white')
+        self.ctrl_s_button = tk.Button(master=self.controller_window_buttons, text='  S  ', bg='white')
+        self.ctrl_e_button = tk.Button(master=self.controller_window_buttons, text='  E  ', bg='white')
+        self.ctrl_w_button = tk.Button(master=self.controller_window_buttons, text='  W  ', bg='white')
+        self.ctrl_l1_button = tk.Button(master=self.controller_window_buttons, text=' L1  ', bg='white')
+        self.ctrl_r1_button = tk.Button(master=self.controller_window_buttons, text='  R1 ', bg='white')
+        # Images to Draw joystick map
+        self.joystick_l = tk.Canvas(master=self.controller_window_joysticks, width=40, height=40, bg='green')
+        self.joystick_r = tk.Canvas(master=self.controller_window_joysticks, width=40, height=40, bg='green')
+        self.joystick_window_no_img = ImageTk.PhotoImage(PILImage.open('img/default_joystick.png'))
+        self.joystick_l_img = ImageTk.PhotoImage(PILImage.open('img/joystick_base_img.png'))
+        self.joystick_l_img_2 = ImageTk.PhotoImage(PILImage.open('img/joystick_base_img.png'))
+        self.joystick_r_img = ImageTk.PhotoImage(PILImage.open('img/joystick_base_img.png'))
+        self.joystick_r_img_2 = ImageTk.PhotoImage(PILImage.open('img/joystick_base_img.png'))
+        self.joystick_frame_counter = 0
+        self.joystick_window_l_img = self.joystick_l.create_image((1, 1), anchor=tk.NW, image=self.joystick_l_img)
+        self.joystick_window_r_img = self.joystick_r.create_image((1, 1), anchor=tk.NW, image=self.joystick_r_img)
 
         # Data I/O to other processes
         self.in_pipe = None
@@ -515,6 +531,10 @@ class Window(tk.Frame):
 
         # Controller Window
         self.controller_window.grid(column=0, row=2)
+        self.controller_window_joysticks.grid(column=0, row=0)
+        self.controller_window_buttons.grid(column=1, row=0)
+        self.joystick_l.grid(column=0, row=0)
+        self.joystick_r.grid(column=0, row=1)
         self.ctrl_n_button.grid(column=1, row=0)
         self.ctrl_s_button.grid(column=1, row=2)
         self.ctrl_e_button.grid(column=2, row=1)
@@ -822,6 +842,165 @@ class Window(tk.Frame):
             control_in.put((self.js.get_numaxes() + self.js.get_numbuttons()), self.js.get_hat(0))  # Hat
             self.current_control_inputs = control_in
             self.pilot_pipe_out.send((control_in.tobytes()))
+
+            # Joystick position update
+            frame = cv2.imread('img/joystick_base_img.png')
+            frame_2 = cv2.imread('img/joystick_base_img.png')
+            # Calculate new joystick location, index is cartesian plane equivalent
+            step = 0.05
+            l_quadrant = 0
+            r_quadrant = 0
+            pointer_l_x = self.current_control_inputs[0][0]
+            pointer_l_y = self.current_control_inputs[0][1]
+            pointer_r_x = self.current_control_inputs[0][2]
+            pointer_r_y = self.current_control_inputs[0][3]
+            # l quadrant calculation
+            if (pointer_l_x >= 0) and (pointer_l_y < 0):
+                l_quadrant = 1
+            elif (pointer_l_x < 0) and (pointer_l_y < 0):
+                l_quadrant = 2
+            elif (pointer_l_x < 0) and (pointer_l_y >= 0):
+                l_quadrant = 3
+            else:
+                l_quadrant = 4
+            # r quadrant calculation
+            if (pointer_r_x >= 0) and (pointer_r_y < 0):
+                r_quadrant = 1
+            elif (pointer_r_x < 0) and (pointer_r_y < 0):
+                r_quadrant = 2
+            elif (pointer_r_x < 0) and (pointer_r_y >= 0):
+                r_quadrant = 3
+            else:
+                r_quadrant = 4
+            pointer_l_x = math.fabs(pointer_l_x)
+            pointer_l_y = math.fabs(pointer_l_y)
+            pointer_r_x = math.fabs(pointer_r_x)
+            pointer_r_y = math.fabs(pointer_r_y)
+            coord_l_x = 0
+            step_l_x = 0
+            coord_l_y = 0
+            step_l_y = 0
+            coord_r_x = 0
+            step_r_x = 0
+            coord_r_y = 0
+            step_r_y = 0
+            while coord_l_x < pointer_l_x:
+                coord_l_x += step
+                step_l_x += 1
+            if step_l_x > 19:
+                step_l_x = 19
+            while coord_l_y < pointer_l_y:
+                coord_l_y += step
+                step_l_y += 1
+            if step_l_y > 19:
+                step_l_y = 19
+            while coord_r_x < pointer_r_x:
+                coord_r_x += step
+                step_r_x += 1
+            if step_r_x > 19:
+                step_r_x = 19
+            while coord_r_y < pointer_r_y:
+                coord_r_y += step
+                step_r_y += 1
+            if step_r_y > 19:
+                step_r_y = 19
+            start_pos_l = []
+            end_pos_l = []
+            start_pos_r = []
+            end_pos_r = []
+            if l_quadrant == 1:  # This is why Python needs switch case
+                start_pos_l = [(19, 19), (20, 20)]
+                end_pos_l = [(38, 0), (39, 1)]
+            elif l_quadrant == 2:
+                start_pos_l = [(0, 19), (1, 20)]
+                end_pos_l = [(19, 0), (20, 1)]
+            elif l_quadrant == 3:
+                start_pos_l = [(0, 38), (1, 39)]
+                end_pos_l = [(19, 19), (20, 20)]
+            else:  # cartesian quadrant 4
+                start_pos_l = [(19, 38), (20, 39)]
+                end_pos_l = [(38, 19), (39, 20)]
+            if r_quadrant == 1:
+                start_pos_r = [(19, 19), (20, 20)]
+                end_pos_r = [(38, 0), (39, 1)]
+            elif r_quadrant == 2:
+                start_pos_r = [(0, 19), (1, 20)]
+                end_pos_r = [(19, 0), (20, 1)]
+            elif r_quadrant == 3:
+                start_pos_r = [(0, 38), (1, 39)]
+                end_pos_r = [(19, 19), (20, 20)]
+            else:  # cartesian quadrant 4
+                start_pos_r = [(19, 38), (20, 39)]
+                end_pos_r = [(38, 19), (39, 20)]
+            if l_quadrant == 1:
+                result_l_x_top = start_pos_l[0][0] + step_l_x
+                result_l_y_top = start_pos_l[0][1] - step_l_y
+                result_l_x_bot = result_l_x_top + 1
+                result_l_y_bot = result_l_y_top + 1
+            elif l_quadrant == 2:
+                result_l_x_top = start_pos_l[0][0] + (19 - step_l_x)
+                result_l_y_top = start_pos_l[0][1] - step_l_y
+                result_l_x_bot = result_l_x_top + 1
+                result_l_y_bot = result_l_y_top + 1
+            elif l_quadrant == 3:
+                result_l_x_top = start_pos_l[0][0] + (19 - step_l_x)
+                result_l_y_top = start_pos_l[0][1] - (19 - step_l_y)
+                result_l_x_bot = result_l_x_top + 1
+                result_l_y_bot = result_l_y_top + 1
+            else:
+                result_l_x_top = start_pos_l[0][0] + step_l_x
+                result_l_y_top = start_pos_l[0][1] - (19 - step_l_y)
+                result_l_x_bot = result_l_x_top + 1
+                result_l_y_bot = result_l_y_top + 1
+            if r_quadrant == 1:
+                result_r_x_top = start_pos_r[0][0] + step_r_x
+                result_r_y_top = start_pos_r[0][1] - step_r_y
+                result_r_x_bot = result_r_x_top + 1
+                result_r_y_bot = result_r_y_top + 1
+            elif r_quadrant == 2:
+                result_r_x_top = start_pos_r[0][0] + (19 - step_r_x)
+                result_r_y_top = start_pos_r[0][1] - step_r_y
+                result_r_x_bot = result_r_x_top + 1
+                result_r_y_bot = result_r_y_top + 1
+            elif r_quadrant == 3:
+                result_r_x_top = start_pos_r[0][0] + (19 - step_r_x)
+                result_r_y_top = start_pos_r[0][1] - (19 - step_r_y)
+                result_r_x_bot = result_r_x_top + 1
+                result_r_y_bot = result_r_y_top + 1
+            else:
+                result_r_x_top = start_pos_r[0][0] + step_r_x
+                result_r_y_top = start_pos_r[0][1] - (19 - step_r_y)
+                result_r_x_bot = result_r_x_top + 1
+                result_r_y_bot = result_r_y_top + 1
+            frame_l = cv2.line(frame, pt1=(result_l_x_top, 0), pt2=(result_l_x_bot-1, 39), color=(0, 180, 0),
+                               thickness=1)
+            frame_l = cv2.line(frame_l, pt1=(0, result_l_y_top), pt2=(39, result_l_y_bot-1), color=(0, 180, 0),
+                               thickness=1)
+            frame_l = cv2.rectangle(img=frame_l,
+                                  pt1=(result_l_x_top, result_l_y_top),
+                                  pt2=(result_l_x_bot, result_l_y_bot),
+                                  color=(255, 255, 255),
+                                  thickness=1)
+            frame_r = cv2.line(frame_2, pt1=(result_r_x_top, 0), pt2=(result_r_x_bot - 1, 39), color=(0, 180, 0),
+                               thickness=1)
+            frame_r = cv2.line(frame_r, pt1=(0, result_r_y_top), pt2=(39, result_r_y_bot - 1), color=(0, 180, 0),
+                               thickness=1)
+            frame_r = cv2.rectangle(img=frame_r,
+                                    pt1=(result_r_x_top, result_r_y_top),
+                                    pt2=(result_r_x_bot, result_r_y_bot),
+                                    color=(255, 255, 255),
+                                    thickness=1)
+            self.joystick_frame_counter += 1
+            if self.joystick_frame_counter % 2 == 1:
+                self.joystick_l_img = ImageTk.PhotoImage(PILImage.fromarray(frame_l))
+                self.joystick_r_img = ImageTk.PhotoImage(PILImage.fromarray(frame_r))
+                self.joystick_l.itemconfig(self.joystick_window_l_img, image=self.joystick_l_img)
+                self.joystick_r.itemconfig(self.joystick_window_r_img, image=self.joystick_r_img)
+            else:
+                self.joystick_l_img_2 = ImageTk.PhotoImage(PILImage.fromarray(frame_l))
+                self.joystick_r_img_2 = ImageTk.PhotoImage(PILImage.fromarray(frame_r))
+                self.joystick_l.itemconfig(self.joystick_window_l_img, image=self.joystick_l_img_2)
+                self.joystick_r.itemconfig(self.joystick_window_r_img, image=self.joystick_r_img_2)
 
             # Button state update
             # Note: comment this out if having trouble with gui freezing, means pilot can't connect
