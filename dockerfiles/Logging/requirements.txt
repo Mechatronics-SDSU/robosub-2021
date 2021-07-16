@@ -20,7 +20,6 @@ Pillow==8.2.0
 protobuf==3.17.3
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
-pygame==2.0.1
 pyparsing==2.4.7
 pyserial==3.5
 python-dateutil==2.8.1
