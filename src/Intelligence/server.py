@@ -22,10 +22,6 @@ from src.inference_dir.gate_detector import GateDetector
 HOST = '127.0.0.1'
 PORT = 65432
 
-
-SERVER_ADDRESS = "localhost:23333"
-
-
 gate_detector = GateDetector()
 
 cap = cv2.VideoCapture('src/files/Additional_Test_Video.mp4')
