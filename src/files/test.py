@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 
 # Capture video from file
-cap = cv2.VideoCapture('Additional_Test_Video.mp4')
+cap = cv2.VideoCapture('src/files/Additional_Test_Video.mp4')
 
 while True:
 

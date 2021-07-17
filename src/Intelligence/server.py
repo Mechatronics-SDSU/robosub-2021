@@ -30,7 +30,6 @@ gate_detector = GateDetector()
 
 cap = cv2.VideoCapture('src/files/Additional_Test_Video.mp4')
 
-
 class Listener(buffer_pb2_grpc.Response_ServiceServicer):
     def __init__(self):
         buffer_pb2_grpc.Response_ServiceServicer.__init__(self)
@@ -38,7 +37,6 @@ class Listener(buffer_pb2_grpc.Response_ServiceServicer):
 
 
     def Info(self, request, context):
-            #CLIENT.containers.run(name="server", command="sleep infinity", image="ubuntu:latest", detach=True)
         retriever = request.send
         decode = retriever.decode("utf-8")
         if  decode == "start":
@@ -54,12 +52,18 @@ def process(cap,):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.connect((HOST,PORT))
+        #print("Socket Connected")
+        cap = cv2.VideoCapture('src/files/Additional_Test_Video.mp4')
         while True:
+            print("Inside While true")
             _, _frame = cap.read()
+            print("We made it")
             result = gate_detector.detect(_frame)
             val = pickle.dumps(result)
             s.sendall(val)
-        
+            
+        cap.release()
+        cv2.destroyAllWindows()
             
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

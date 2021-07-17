@@ -7,13 +7,11 @@ import grpc
 import logging
 import cv2
 import pickle
-import docker
 import socket
 import subprocess
 
 from src.inference_dir.gate_detector import GateDetector
 
-CLIENT = docker.from_env()
 
 
 HOST = '127.0.0.1'
@@ -34,7 +32,6 @@ class Spawn():
 	def run(self):
 		channel = grpc.insecure_channel('localhost:50051')
 		stub = buffer_pb2_grpc.Response_ServiceStub(channel)
-			#CLIENT.containers.run(name="client", command="sleep infinity", image="ubuntu:latest", detach=True)
 		response_string = b"start"
 		stub.Info(buffer_pb2.Send_Request(send=response_string))
 		term_socket()
