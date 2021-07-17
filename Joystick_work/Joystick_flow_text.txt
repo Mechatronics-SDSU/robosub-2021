@@ -1,0 +1,8 @@
+
+
+Taking in control state inputs from xbox 1 controller and mapping values to thrust values, 
+
+1. Scale Joystick value 
+
+   - use absolute value of Cartesian plane to extract x and y values bounded by -1 and 1. 
+   - map value from 0 to 1 into 0 - 100 for thruster value 
