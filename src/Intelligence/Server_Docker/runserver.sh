@@ -3,8 +3,9 @@ echo "Setting up Server Container"
 
 cd ..
 cd ..
+cd ..
 
-cp $(pwd)/src/Intelligence/Dockerfile $(pwd)/Dockerfile
+cp $(pwd)/src/Intelligence/Server_Docker/Dockerfile $(pwd)/Dockerfile
 
 docker build . -t server_container
 #del Dockerfile
