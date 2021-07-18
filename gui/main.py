@@ -905,33 +905,23 @@ class Window(tk.Frame):
             if step_r_y > 19:
                 step_r_y = 19
             start_pos_l = []
-            end_pos_l = []
             start_pos_r = []
-            end_pos_r = []
             if l_quadrant == 1:  # This is why Python needs switch case
                 start_pos_l = [(19, 19), (20, 20)]
-                end_pos_l = [(38, 0), (39, 1)]
             elif l_quadrant == 2:
                 start_pos_l = [(0, 19), (1, 20)]
-                end_pos_l = [(19, 0), (20, 1)]
             elif l_quadrant == 3:
                 start_pos_l = [(0, 38), (1, 39)]
-                end_pos_l = [(19, 19), (20, 20)]
             else:  # cartesian quadrant 4
                 start_pos_l = [(19, 38), (20, 39)]
-                end_pos_l = [(38, 19), (39, 20)]
             if r_quadrant == 1:
                 start_pos_r = [(19, 19), (20, 20)]
-                end_pos_r = [(38, 0), (39, 1)]
             elif r_quadrant == 2:
                 start_pos_r = [(0, 19), (1, 20)]
-                end_pos_r = [(19, 0), (20, 1)]
             elif r_quadrant == 3:
                 start_pos_r = [(0, 38), (1, 39)]
-                end_pos_r = [(19, 19), (20, 20)]
             else:  # cartesian quadrant 4
                 start_pos_r = [(19, 38), (20, 39)]
-                end_pos_r = [(38, 19), (39, 20)]
             if l_quadrant == 1:
                 result_l_x_top = start_pos_l[0][0] + step_l_x
                 result_l_y_top = start_pos_l[0][1] - step_l_y
