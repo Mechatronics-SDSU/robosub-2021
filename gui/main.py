@@ -1076,12 +1076,16 @@ class Window(tk.Frame):
                 elif gui_cmd[1] == 'logging':
                     if gui_cmd[2] == 'conn_socket':
                         self.logging_socket_is_connected = True
+                    elif gui_cmd[2] == 'no_conn_socket':
+                        self.logging_socket_is_connected = False
                     else:
                         self.remote_logging_queue.append(gui_cmd[2])
                 elif gui_cmd[1] == 'telemetry':
                     if isinstance(gui_cmd[2], str):
                         if gui_cmd[2] == 'conn_socket':
                             self.telemetry_socket_is_connected = True
+                        elif gui_cmd[2] == 'no_conn_socket':
+                            self.telemetry_socket_is_connected = False
                     elif isinstance(gui_cmd[2], bytes):
                         tel = sensor_tel.Telemetry()
                         tel.load_data_from_bytes(gui_cmd[2])
@@ -1089,6 +1093,8 @@ class Window(tk.Frame):
                 elif gui_cmd[1] == 'pilot':
                     if gui_cmd[2] == 'conn_socket':
                         self.pilot_socket_is_connected = True
+                    elif gui_cmd[2] == 'no_conn_socket':
+                        self.pilot_socket_is_connected = False
 
     def update(self):
         """Update function to read elements from other processes into the GUI
@@ -1097,7 +1103,8 @@ class Window(tk.Frame):
         # Manual on update functions below:
         self.run_logger()
         self.update_frames()  # Update video frame
-        self.send_controller_state()  # Send current inputs
+        if self.pilot_socket_is_connected:
+            self.send_controller_state()  # Send current inputs
         self.update_telemetry()  # Update telemetry displayed
         # Update all button statuses
         self.update_button(self.cmd_status_button, self.cmd_connected)
@@ -1210,6 +1217,8 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
     hostname = ''
     port = ''
     server_conn = False
+    rcon_try_counter_max = 3
+    rcon_try_count = 0
     while True:
         # Wait for this process to receive info from the pipe, read it in when it does
         conn = mp.connection.wait([video_pipe_in], timeout=-1)
@@ -1223,6 +1232,7 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
         elif code == 'initialize':
             socket_started = True
             code = ''
+            rcon_try_count = 0
         elif code == 'stop_socket':
             socket_started = False
             video_pipe_out.send(('gui', 'video', 'no_conn_socket'))
@@ -1235,33 +1245,39 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
                     server_conn = True
                     video_pipe_out.send(('gui', 'video', 'conn_socket'))
                 except ConnectionRefusedError:
-                    if os.name == 'nt':
-                        logger.log('[@VID] WARNING: Attempted to start video on Windows. Only works on Linux.')
-                    else:
-                        logger.log('[@VID] ERROR: Failed to connect to video socket.')
+                    rcon_try_count += 1
+                    logger.log('[@VID] ERROR: Failed to connect to remote server. '
+                               + 'Retrying: ' + str(rcon_try_count) + '/' + str(rcon_try_counter_max))
                     server_conn = False
+                    if rcon_try_count >= rcon_try_counter_max:
+                        socket_started = False
+                        video_pipe_out.send(('gui', 'video', 'no_conn_socket'))
                 data = b''
                 payload_size = struct.calcsize('>L')
                 # Get frame data and send to video_stream_out
                 while server_conn:
                     try:
                         s.sendall(b'1')
-                    except ConnectionAbortedError:
+                    except (ConnectionAbortedError, ConnectionResetError) as e:
                         server_conn = False
                         break
                     while len(data) < payload_size:
                         try:
                             data += s.recv(4096)
-                        except ConnectionAbortedError:
+                        except (ConnectionAbortedError, ConnectionResetError) as e:
                             server_conn = False
                             break
                     packed_msg_size = data[:payload_size]
                     data = data[payload_size:]
-                    msg_size = struct.unpack('>L', packed_msg_size)[0]
+                    try:
+                        msg_size = struct.unpack('>L', packed_msg_size)[0]
+                    except struct.error as e:  # Server connection interrupt mid frame send
+                        server_conn = False
+                        break
                     while len(data) < msg_size:
                         try:
                             data += s.recv(4096)
-                        except ConnectionAbortedError:
+                        except (ConnectionAbortedError, ConnectionResetError) as e:
                             server_conn = False
                             break
                     frame_data = data[:msg_size]
@@ -1279,6 +1295,8 @@ def logging_proc(logger, logging_pipe_in, logging_pipe_out):
     port = ''
     started = False
     server_conn = False
+    rcon_try_counter_max = 3
+    rcon_try_count = 0
     while True:
         conn = mp.connection.wait([logging_pipe_in], timeout=-1)
         if len(conn) > 0:
@@ -1287,6 +1305,7 @@ def logging_proc(logger, logging_pipe_in, logging_pipe_out):
                 hostname = result[3]
                 port = result[4]
                 started = True
+                rcon_try_count = 0
         if started:
             lc = sub_logging.LoggerClient(save_logs=False)
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -1296,11 +1315,17 @@ def logging_proc(logger, logging_pipe_in, logging_pipe_out):
                     server_conn = True
                     logging_pipe_out.send(('gui', 'logging', 'conn_socket'))
                 except ConnectionRefusedError:
+                    rcon_try_count += 1
+                    logger.log('[@LOG] ERROR: Failed to connect to remote server. '
+                               + 'Retrying: ' + str(rcon_try_count) + '/' + str(rcon_try_counter_max))
                     server_conn = False
+                    if rcon_try_count >= rcon_try_counter_max:
+                        started = False
+                        logging_pipe_out.send(('gui', 'logging', 'no_conn_socket'))
                 while server_conn:
                     try:
                         s.sendall(b'1')
-                    except ConnectionAbortedError:
+                    except (ConnectionAbortedError, ConnectionResetError) as e:
                         server_conn = False
                         break
                     try:
@@ -1311,7 +1336,7 @@ def logging_proc(logger, logging_pipe_in, logging_pipe_out):
                         for i in range(len(log_list)):
                             lc.logging_queue.append(log_list[i])
                             logging_pipe_out.send(('gui', 'logging', lc.dequeue()))
-                    except ConnectionAbortedError:
+                    except (ConnectionAbortedError, ConnectionResetError) as e:
                         server_conn = False
 
 
@@ -1322,6 +1347,8 @@ def telemetry_proc(logger, telemetry_pipe_in, telemetry_pipe_out):
     port = ''
     started = False
     server_conn = False
+    rcon_try_counter_max = 3
+    rcon_try_count = 0
     while True:
         conn = mp.connection.wait([telemetry_pipe_in], timeout=-1)
         if len(conn) > 0:
@@ -1330,6 +1357,7 @@ def telemetry_proc(logger, telemetry_pipe_in, telemetry_pipe_out):
                 hostname = result[3]
                 port = result[4]
                 started = True
+                rcon_try_count = 0
         if started:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -1338,17 +1366,23 @@ def telemetry_proc(logger, telemetry_pipe_in, telemetry_pipe_out):
                     server_conn = True
                     telemetry_pipe_out.send(('gui', 'telemetry', 'conn_socket'))
                 except ConnectionRefusedError:
+                    rcon_try_count += 1
+                    logger.log('[@TEL] ERROR: Failed to connect to remote server. '
+                               + 'Retrying: ' + str(rcon_try_count) + '/' + str(rcon_try_counter_max))
                     server_conn = False
+                    if rcon_try_count >= rcon_try_counter_max:
+                        started = False
+                        telemetry_pipe_out.send(('gui', 'telemetry', 'no_conn_socket'))
                 while server_conn:
                     try:
                         s.sendall(b'1')
-                    except ConnectionAbortedError:
+                    except (ConnectionAbortedError, ConnectionResetError) as e:
                         server_conn = False
                         break
                     try:
                         data = s.recv(4096)
                         telemetry_pipe_out.send(('gui', 'telemetry', data))
-                    except ConnectionAbortedError:
+                    except (ConnectionAbortedError, ConnectionResetError) as e:
                         server_conn = False
 
 
@@ -1360,6 +1394,8 @@ def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui):
     last_input = np.zeros(shape=(1, 1))
     started = False
     server_conn = False
+    rcon_try_counter_max = 3
+    rcon_try_count = 0
     while True:
         conn = mp.connection.wait([pilot_pipe_in], timeout=-1)
         if len(conn) > 0:
@@ -1369,6 +1405,7 @@ def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui):
                     hostname = result[3]
                     port = result[4]
                     started = True
+                    rcon_try_count = 0
         if started:
             # Controller
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -1378,24 +1415,38 @@ def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui):
                     server_conn = True
                     pilot_pipe_out.send(('gui', 'pilot', 'conn_socket'))
                 except ConnectionRefusedError:
+                    pilot_pipe_out.send(('gui', 'pilot', 'no_conn_socket'))
+                    rcon_try_count += 1
+                    logger.log('[@PLT] ERROR: Failed to connect to remote server. '
+                               + 'Retrying: ' + str(rcon_try_count) + '/' + str(rcon_try_counter_max))
                     server_conn = False
+                    if rcon_try_count >= rcon_try_counter_max:
+                        started = False
                 while server_conn:
                     try:
                         data = s.recv(1024)
-                    except ConnectionAbortedError:
+                    except (ConnectionAbortedError, ConnectionResetError) as e:
+                        pilot_pipe_out.send(('gui', 'pilot', 'no_conn_socket'))
                         server_conn = False
+                        break
                     if data == b'1':
                         controller_input = mp.connection.wait([pipe_in_from_gui], timeout=-1)
                         if len(controller_input) > 0:
                             last_input = controller_input[len(controller_input)-1].recv()
                             try:
                                 s.sendall(last_input)
-                            except ConnectionAbortedError:
+                            except (ConnectionAbortedError, ConnectionResetError) as e:
+                                pilot_pipe_out.send(('gui', 'pilot', 'no_conn_socket'))
                                 server_conn = False
                                 break
                             controller_input.clear()  # Clear input after sending latest
                         else:  # Send previous input
-                            s.sendall(last_input)
+                            try:
+                                s.sendall(last_input)
+                            except (ConnectionAbortedError, ConnectionResetError) as e:
+                                pilot_pipe_out.send(('gui', 'pilot', 'no_conn_socket'))
+                                server_conn = False
+                                break
                 controller_input = mp.connection.wait([pipe_in_from_gui], timeout=-1)
                 if len(controller_input) > 0:
                     controller_input.clear()
