@@ -19,6 +19,8 @@ These are instructions on how to setup your own machine to run the software we u
 - [x] Install pip if not installed: `sudo apt-get install python3-pip` 
 - [x] Install dependency libraries for the GUI
 - [x] `sudo pip install grpcio==1.38.0 opencv-python==4.5.1.48 opencv-contrib-python==4.5.2.54 google-api-python-client==2.8.0 pillow==8.2.0 pygame==2.0.1`
+- [x] Install opencv dependencies
+- [x] `apt-get install libgl1-mesa-dev libglib2.0-0 libsm6 libxrender1 libxext6`
 
 #### Git
 - [x] `git clone <this repo>`
