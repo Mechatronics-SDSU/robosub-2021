@@ -1,6 +1,6 @@
 @ECHO ON
-set PYTHONPATH=%PATH%;%cd%\src\utils
-set PYTHONPATH=%PATH%;%cd%\src\Control
-set PYTHONPATH=%PATH%;%cd%\src\Intelligence
-set PYTHONPATH=%PATH%;%cd%\src\Inference
-set PYTHONPATH=%PATH%;%cd%\gui
+set PYTHONPATH=%PYTHONPATH%;%cd%\src\utils
+set PYTHONPATH=%PYTHONPATH%;%cd%\src\Control
+set PYTHONPATH=%PYTHONPATH%;%cd%\src\Intelligence
+set PYTHONPATH=%PYTHONPATH%;%cd%\src\Inference
+set PYTHONPATH=%PYTHONPATH%;%cd%\gui
