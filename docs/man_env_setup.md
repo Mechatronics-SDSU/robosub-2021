@@ -13,12 +13,12 @@
 ###### Display Monitor for Terminal
 ###### Keyboard
 
-#### OS: 
+### OS: 
 [Ubuntu Server 20.04.2 64 Bit for ARM](https://ubuntu.com/download/raspberry-pi/thank-you?version=20.04.2&architecture=server-arm64+raspi)
 
-#### Software install and usage
+### Software install and usage
 
-##### OS and Python dependencies
+#### OS and Python dependencies
 - [x] Plug in SD card, Ethernet, then power the Pi. Keyboard and HDMI optional.
 - [x] Login on default username/password `ubuntu/ubuntu` and change password.
 - [x] `ip address` Note IP address obtained via DHCP for SSH. Monitor and Keyboard no longer necessary.
@@ -32,7 +32,7 @@
 - [x] `sudo pip3 install opencv-python==4.5.1.48`
 - [x] `sudo pip3 install opencv-contrib-python==4.5.2.54`
 
-##### Docker
+#### Docker
 From [here](https://docs.docker.com/engine/install/ubuntu/)
 - [x] `sudo apt-get install \
     apt-transport-https \
@@ -48,7 +48,7 @@ From [here](https://docs.docker.com/engine/install/ubuntu/)
 - [x] `sudo apt-get install docker-ce docker-ce-cli containerd.io`
 - [x] `sudo pip3 install docker`
 
-##### Git and container setup
+#### Git and container setup
 - [x] `git clone https://github.com/DOCgould/MechatronicsRobosub2021` 
 - [x] `git init`
 - [x] `git checkout <relevant branch>`
@@ -59,13 +59,13 @@ From [here](https://docs.docker.com/engine/install/ubuntu/)
 - [x] `. build_<relevant_container>.sh` Run whatever build scripts you want but make sure it's done from this directory
 - [x] If building additional containers, `cd tools/scripts` and run additional build scripts.
 
-##### Testing containers with GUI
+#### Testing containers with GUI
 - [x] `cd <repo_directory>`
 - [x] `python3 src/Intelligence/all_systems_demo.py`
 
-##### Starting Containers
+#### Starting Containers
 - [x] `. <repo_directory>/tools/scripts/start_all_containers.sh`
 
-##### Killing Containers
+#### Killing Containers
 - [x] `. <repo_directory>/tools/scripts/kill_all_containers.sh`
 
