@@ -373,26 +373,52 @@ class Window(tk.Frame):
         # Controller Window
         self.controller_window = tk.Frame(master=self.master, width=640, height=350, bg='white')
         self.controller_window_buttons = tk.Frame(master=self.controller_window, width=640, height=350, bg='white')
-        self.controller_window_joysticks = tk.Frame(master=self.controller_window)
+        self.controller_window_joysticks_l = tk.Frame(master=self.controller_window)
+        self.controller_window_joysticks_r = tk.Frame(master=self.controller_window)
         # Controller inputs
         self.current_control_inputs = None
         self.ctrl_n_button = tk.Button(master=self.controller_window_buttons, text='  N  ', bg='white')
         self.ctrl_s_button = tk.Button(master=self.controller_window_buttons, text='  S  ', bg='white')
         self.ctrl_e_button = tk.Button(master=self.controller_window_buttons, text='  E  ', bg='white')
         self.ctrl_w_button = tk.Button(master=self.controller_window_buttons, text='  W  ', bg='white')
-        self.ctrl_l1_button = tk.Button(master=self.controller_window_buttons, text=' L1  ', bg='white')
-        self.ctrl_r1_button = tk.Button(master=self.controller_window_buttons, text='  R1 ', bg='white')
-        # Images to Draw joystick map
-        self.joystick_l = tk.Canvas(master=self.controller_window_joysticks, width=40, height=40, bg='green')
-        self.joystick_r = tk.Canvas(master=self.controller_window_joysticks, width=40, height=40, bg='green')
+        self.ctrl_l1_button = tk.Button(master=self.controller_window_joysticks_l, text='  L1  ', bg='white')
+        self.ctrl_r1_button = tk.Button(master=self.controller_window_joysticks_r, text='  R1  ', bg='white')
+        self.ctrl_l_button = tk.Button(master=self.controller_window_buttons, text=' Sel ', bg='white')
+        self.ctrl_r_button = tk.Button(master=self.controller_window_buttons, text='  St ', bg='white')
+        # Images to draw L2/R2 inputs
+        self.l2_text = tk.Label(master=self.controller_window_joysticks_l, text='L2', bd=0, anchor='e',
+                                bg='white',
+                                justify=tk.RIGHT)
+        self.ctrl_l2_button = tk.Canvas(master=self.controller_window_joysticks_l, width=40, height=40, bg='blue')
+        self.r2_text = tk.Label(master=self.controller_window_joysticks_r, text='R2', bd=0, anchor='w',
+                                bg='white',
+                                justify=tk.LEFT)
+        self.ctrl_r2_button = tk.Canvas(master=self.controller_window_joysticks_r, width=40, height=40, bg='blue')
+        self.lr_button_base = cv2.imread('img/l2r2_base.png')
+        self.l_button_img = ImageTk.PhotoImage(PILImage.open('img/l2r2_base.png'))
+        self.l_button_img_2 = ImageTk.PhotoImage(PILImage.open('img/l2r2_base.png'))
+        self.r_button_img = ImageTk.PhotoImage(PILImage.open('img/l2r2_base.png'))
+        self.r_button_img_2 = ImageTk.PhotoImage(PILImage.open('img/l2r2_base.png'))
+        self.lr_button_frame_counter = 0
+        self.l_window_img = self.ctrl_l2_button.create_image((2, 2), anchor=tk.NW, image=self.l_button_img)
+        self.r_window_img = self.ctrl_r2_button.create_image((2, 2), anchor=tk.NW, image=self.r_button_img)
+        # Images to draw joystick map
+        self.joystick_l = tk.Canvas(master=self.controller_window_joysticks_l, width=40, height=40, bg='green')
+        self.joystick_l_text = tk.Label(master=self.controller_window_joysticks_l, text='LJ', bd=0, anchor='e',
+                                bg='white',
+                                justify=tk.RIGHT)
+        self.joystick_r = tk.Canvas(master=self.controller_window_joysticks_r, width=40, height=40, bg='green')
+        self.joystick_r_text = tk.Label(master=self.controller_window_joysticks_r, text='RJ', bd=0, anchor='w',
+                                        bg='white',
+                                        justify=tk.LEFT)
         self.joystick_window_no_img = ImageTk.PhotoImage(PILImage.open('img/default_joystick.png'))
         self.joystick_l_img = ImageTk.PhotoImage(PILImage.open('img/joystick_base_img.png'))
         self.joystick_l_img_2 = ImageTk.PhotoImage(PILImage.open('img/joystick_base_img.png'))
         self.joystick_r_img = ImageTk.PhotoImage(PILImage.open('img/joystick_base_img.png'))
         self.joystick_r_img_2 = ImageTk.PhotoImage(PILImage.open('img/joystick_base_img.png'))
         self.joystick_frame_counter = 0
-        self.joystick_window_l_img = self.joystick_l.create_image((1, 1), anchor=tk.NW, image=self.joystick_l_img)
-        self.joystick_window_r_img = self.joystick_r.create_image((1, 1), anchor=tk.NW, image=self.joystick_r_img)
+        self.joystick_window_l_img = self.joystick_l.create_image((2, 2), anchor=tk.NW, image=self.joystick_l_img)
+        self.joystick_window_r_img = self.joystick_r.create_image((2, 2), anchor=tk.NW, image=self.joystick_r_img)
 
         # Data I/O to other processes
         self.in_pipe = None
@@ -531,16 +557,28 @@ class Window(tk.Frame):
 
         # Controller Window
         self.controller_window.grid(column=0, row=2)
-        self.controller_window_joysticks.grid(column=0, row=0)
+        self.controller_window_joysticks_l.grid(column=0, row=0)
         self.controller_window_buttons.grid(column=1, row=0)
-        self.joystick_l.grid(column=0, row=0)
-        self.joystick_r.grid(column=0, row=1)
+        self.controller_window_joysticks_r.grid(column=2, row=0)
+
+        self.l2_text.grid(column=0, row=0)
+        self.ctrl_l2_button.grid(column=1, row=0)
+        self.ctrl_l1_button.grid(column=1, row=1)
+        self.joystick_l_text.grid(column=0, row=2)
+        self.joystick_l.grid(column=1, row=2)
+
+        self.ctrl_l_button.grid(column=0, row=0)
         self.ctrl_n_button.grid(column=1, row=0)
-        self.ctrl_s_button.grid(column=1, row=2)
-        self.ctrl_e_button.grid(column=2, row=1)
+        self.ctrl_r_button.grid(column=2, row=0)
         self.ctrl_w_button.grid(column=0, row=1)
-        self.ctrl_l1_button.grid(column=0, row=0)
-        self.ctrl_r1_button.grid(column=2, row=0)
+        self.ctrl_e_button.grid(column=2, row=1)
+        self.ctrl_s_button.grid(column=1, row=2)
+
+        self.r2_text.grid(column=1, row=0)
+        self.ctrl_r2_button.grid(column=0, row=0)
+        self.ctrl_r1_button.grid(column=0, row=1)
+        self.joystick_r_text.grid(column=1, row=2)
+        self.joystick_r.grid(column=0, row=2)
 
     @staticmethod
     def diag_box(message):
@@ -843,11 +881,80 @@ class Window(tk.Frame):
             self.current_control_inputs = control_in
             self.pilot_pipe_out.send((control_in.tobytes()))
 
+            # L2/R2 threshold update
+            button_frame = cv2.imread('img/l2r2_base.png')
+            button_frame_2 = cv2.imread('img/l2r2_base.png')
+            step = 0.05
+            l_half = 0
+            r_half = 0
+            level_l = self.current_control_inputs[0][4]
+            level_r = self.current_control_inputs[0][5]
+            if level_l >= 0:
+                l_half = 1
+            else:
+                l_half = 2
+            if level_r >= 0:
+                r_half = 1
+            else:
+                r_half = 2
+            level_l = math.fabs(level_l)
+            level_r = math.fabs(level_r)
+            start_pos_lr_top = (0, 19)
+            end_pos_lr_top = (39, 0)
+            start_pos_lr_bot = (0, 39)
+            end_pos_lr_bot = (39, 19)
+            steps_l = 0
+            steps_r = 0
+            while (steps_l * step) < level_l:
+                steps_l += 1
+            if steps_l > 19:
+                steps_l = 19
+            while (steps_r * step) < level_r:
+                steps_r += 1
+            if steps_r > 19:
+                steps_r = 19
+            result_l2_x_top = 39
+            result_l2_y_top = 0
+            result_l2_x_bot = 0
+            result_l2_y_bot = 39
+            result_r2_x_top = 39
+            result_r2_y_top = 0
+            result_r2_x_bot = 0
+            result_r2_y_bot = 39
+            if l_half == 2:
+                result_l2_y_top = int(math.fabs(int(math.fabs(19 - steps_l)) - 19)) + 19
+            else:
+                result_l2_y_top = 19 - steps_l
+            if r_half == 2:
+                result_r2_y_top = int(math.fabs(int(math.fabs(19 - steps_r)) - 19)) + 19
+            else:
+                result_r2_y_top = 19 - steps_r
+            button_frame = cv2.rectangle(img=button_frame,
+                                    pt1=(result_l2_x_top, result_l2_y_top),
+                                    pt2=(result_l2_x_bot, result_l2_y_bot),
+                                    color=(255, 0, 0),
+                                    thickness=-1)
+            button_frame_2 = cv2.rectangle(img=button_frame_2,
+                                         pt1=(result_r2_x_top, result_r2_y_top),
+                                         pt2=(result_r2_x_bot, result_r2_y_bot),
+                                         color=(255, 0, 0),
+                                         thickness=-1)
+            self.lr_button_frame_counter += 1
+            if self.joystick_frame_counter % 2 == 1:
+                self.l_button_img = ImageTk.PhotoImage(PILImage.fromarray(button_frame))
+                self.r_button_img = ImageTk.PhotoImage(PILImage.fromarray(button_frame_2))
+                self.ctrl_l2_button.itemconfig(self.l_window_img, image=self.l_button_img)
+                self.ctrl_r2_button.itemconfig(self.r_window_img, image=self.r_button_img)
+            else:
+                self.l_button_img_2 = ImageTk.PhotoImage(PILImage.fromarray(button_frame))
+                self.r_button_img_2 = ImageTk.PhotoImage(PILImage.fromarray(button_frame_2))
+                self.ctrl_l2_button.itemconfig(self.l_window_img, image=self.l_button_img_2)
+                self.ctrl_r2_button.itemconfig(self.r_window_img, image=self.r_button_img_2)
+
             # Joystick position update
             frame = cv2.imread('img/joystick_base_img.png')
             frame_2 = cv2.imread('img/joystick_base_img.png')
             # Calculate new joystick location, index is cartesian plane equivalent
-            step = 0.05
             l_quadrant = 0
             r_quadrant = 0
             pointer_l_x = self.current_control_inputs[0][0]
@@ -1018,6 +1125,14 @@ class Window(tk.Frame):
                 self.ctrl_r1_button.configure(self.ctrl_r1_button, bg='red')
             elif self.ctrl_r1_button.config('bg')[4] == 'red' and (0 == int(self.current_control_inputs[0, 11])):
                 self.ctrl_r1_button.configure(self.ctrl_r1_button, bg='white')
+            if self.ctrl_l_button.config('bg')[4] == 'white' and (1 == int(self.current_control_inputs[0, 12])):
+                self.ctrl_l_button.configure(self.ctrl_l_button, bg='red')
+            elif self.ctrl_l_button.config('bg')[4] == 'red' and (0 == int(self.current_control_inputs[0, 12])):
+                self.ctrl_l_button.configure(self.ctrl_l_button, bg='white')
+            if self.ctrl_r_button.config('bg')[4] == 'white' and (1 == int(self.current_control_inputs[0, 13])):
+                self.ctrl_r_button.configure(self.ctrl_r_button, bg='red')
+            elif self.ctrl_r_button.config('bg')[4] == 'red' and (0 == int(self.current_control_inputs[0, 13])):
+                self.ctrl_r_button.configure(self.ctrl_r_button, bg='white')
 
     def update_telemetry(self):
         """Updates the telemetry window.
