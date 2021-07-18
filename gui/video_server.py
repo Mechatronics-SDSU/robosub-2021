@@ -48,13 +48,13 @@ class SocketConnection:
         """Runs the TCP socket server
         """
         print('Started Thread')
-        vs = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        vs = cv2.VideoCapture(0, cv2.CAP_V4L2)
         vs.set(3, 640)
         vs.set(4, 480)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind((self.host, self.port))
-            s.listen(5)
+            s.listen()
             conn, address = s.accept()
             print('Received connection from address: ' + str(address))
             while self.started:
