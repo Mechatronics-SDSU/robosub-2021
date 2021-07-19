@@ -1353,12 +1353,11 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
                 payload_size = struct.calcsize('>L')
                 # Get frame data and send to video_stream_out
                 while server_conn:
-                # try:
-                    s.sendall(b'1')
-                # except (ConnectionAbortedError, ConnectionResetError) as e:
-                    # print('At 1st ab error: ' + str(e))
-                    # server_conn = False
-                    # break
+                    try:
+                        s.sendall(b'1')
+                    except (ConnectionAbortedError, ConnectionResetError) as e:
+                        server_conn = False
+                        break
                     data_size = 0
                     data_size_last = 0
                     while (len(data) < payload_size) and server_conn:
