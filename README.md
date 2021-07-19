@@ -12,18 +12,18 @@ This repository will house the primary application suite for the [2021 Mechatron
 
 ### Setup
 * [Setting up the Raspberry Pi Hardware](docs/man_env_setup.md)
-* [Setting up GUI on HOST machine](docs/host_setup.md)
+* [Setting up GUI on HOST machine](docs/man_host_setup.md)
 
 ### Operation
-[GUI Operator Manual](docs/man_gui_operation.md)
+* [GUI Operator Manual](docs/man_gui_operation.md)
 
 ## Documentation
 
 ### Pi
-[System internal/external communication pathways](docs/ref_port_config.md)
+* [System internal/external communication pathways](docs/ref_port_config.md)
 
 ### HOST
-[GUI Architecture](docs/ref_gui_architecture.md)
+* [GUI Architecture](docs/ref_gui_architecture.md)
 
 <div align="center">
   <img src="img/construction.png"
