@@ -1316,11 +1316,9 @@ def video_proc_udp(logger, video_pipe_in, video_pipe_out, video_stream_out):
 def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
     """Video socket driver code, running on a TCP connection.
     """
-    code = ''
-    client = None
-    socket_started = False
     hostname = ''
     port = ''
+    socket_started = False
     server_conn = False
     rcon_try_counter_max = 3
     rcon_try_count = 0
@@ -1329,18 +1327,11 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
         conn = mp.connection.wait([video_pipe_in], timeout=-1)
         if len(conn) > 0:
             result = conn[0].recv()
-            code = str(result[2])
-            hostname = result[3]
-            port = result[4]
-        if code == '':
-            pass
-        elif code == 'initialize':
-            socket_started = True
-            code = ''
-            rcon_try_count = 0
-        elif code == 'stop_socket':
-            socket_started = False
-            video_pipe_out.send(('gui', 'video', 'no_conn_socket'))
+            if result[2] == 'initialize':
+                hostname = result[3]
+                port = result[4]
+                socket_started = True
+                rcon_try_count = 0
         # Connect over TCP
         if socket_started:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -1348,8 +1339,9 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
                 try:
                     s.connect((hostname, port))
                     server_conn = True
+                    rcon_try_count = 0
                     video_pipe_out.send(('gui', 'video', 'conn_socket'))
-                except ConnectionRefusedError:
+                except ConnectionRefusedError as e:
                     rcon_try_count += 1
                     logger.log('[@VID] ERROR: Failed to connect to remote server. '
                                + 'Retrying: ' + str(rcon_try_count) + '/' + str(rcon_try_counter_max))
@@ -1361,17 +1353,26 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
                 payload_size = struct.calcsize('>L')
                 # Get frame data and send to video_stream_out
                 while server_conn:
-                    try:
-                        s.sendall(b'1')
-                    except (ConnectionAbortedError, ConnectionResetError) as e:
-                        server_conn = False
-                        break
-                    while len(data) < payload_size:
+                # try:
+                    s.sendall(b'1')
+                # except (ConnectionAbortedError, ConnectionResetError) as e:
+                    # print('At 1st ab error: ' + str(e))
+                    # server_conn = False
+                    # break
+                    data_size = 0
+                    data_size_last = 0
+                    while (len(data) < payload_size) and server_conn:
                         try:
                             data += s.recv(4096)
-                        except (ConnectionAbortedError, ConnectionResetError) as e:
+                            data_size_last = data_size
+                            data_size = len(data)
+                        except (ConnectionAbortedError, ConnectionResetError):
                             server_conn = False
                             break
+                        else:
+                            if data_size_last == data_size:
+                                server_conn = False
+                                break
                     packed_msg_size = data[:payload_size]
                     data = data[payload_size:]
                     try:
@@ -1443,6 +1444,7 @@ def logging_proc(logger, logging_pipe_in, logging_pipe_out):
                             logging_pipe_out.send(('gui', 'logging', lc.dequeue()))
                     except (ConnectionAbortedError, ConnectionResetError) as e:
                         server_conn = False
+                        break
 
 
 def telemetry_proc(logger, telemetry_pipe_in, telemetry_pipe_out):
