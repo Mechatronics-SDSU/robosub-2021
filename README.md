@@ -11,8 +11,8 @@ This repository will house the primary application suite for the [2021 Mechatron
 ## Manuals
 
 ### Setup
-[Setting up the Raspberry Pi Hardware](docs/man_env_setup.md)
-[Setting up GUI on HOST machine](docs/host_setup.md)
+* [Setting up the Raspberry Pi Hardware](docs/man_env_setup.md)
+* [Setting up GUI on HOST machine](docs/host_setup.md)
 
 ### Operation
 [GUI Operator Manual](docs/man_gui_operation.md)
