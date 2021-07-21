@@ -18,9 +18,6 @@ HOST = ''
 PORT = 65432
 
 
-SERVER_ADDRESS = "localhost:23333"
-
-
 CLIENT_ID = 1
 start = False
 
@@ -30,7 +27,7 @@ class Spawn():
 		
 		
 	def run(self):
-		channel = grpc.insecure_channel('localhost:50051')
+		channel = grpc.insecure_channel('50051')
 		stub = buffer_pb2_grpc.Response_ServiceStub(channel)
 		response_string = b"start"
 		stub.Info(buffer_pb2.Send_Request(send=response_string))
