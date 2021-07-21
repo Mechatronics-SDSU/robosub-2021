@@ -2,8 +2,8 @@
 echo "Setting up Video Container"
 cd ..
 cd ..
-cp $(pwd)/dockerfiles/Video/Dockerfile $(pwd)/Dockerfile
-cp $(pwd)/dockerfiles/Video/requirements.txt $(pwd)/requirements.txt
+cp "$(pwd)/dockerfiles/Video/Dockerfile" "$(pwd)/Dockerfile"
+cp "$(pwd)/dockerfiles/Video/requirements.txt" "$(pwd)/requirements.txt"
 docker build . -t video_container
 rm Dockerfile
 rm requirements.txt
