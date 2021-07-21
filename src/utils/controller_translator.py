@@ -28,8 +28,9 @@ import numpy as np
 class ControllerTranslator:
     """Gets controller state as a numpy array and translates it into controls sent to the maestro.
     """
-    def __init__(self, offset=0, invert_controls=False):
+    def __init__(self, offset=0, invert_controls=False, joystick_drift_compensation=0.05):
         self.invert = invert_controls
+        self.joystick_drift_compensation = joystick_drift_compensation
         self.offset = offset  # amount to offset ESCs by when performing translation.
         # Ex. ESC needs value of 50 to begin moving thrusters. Offset of 49 means 0 is mapped to 49.
 
@@ -87,22 +88,33 @@ class ControllerTranslator:
             quadrant_RJ = 4
 
         # Translate
-        # SYT/PYT is a function of LJY only
+        # SYT/PYT is a function of LJY and RJX
         SYT = 0
         PYT = 0
-        if (quadrant_LJ == 1) or (quadrant_LJ == 2):  # Go forward
+        if ((quadrant_LJ == 1) or (quadrant_LJ == 2)) and (math.fabs(RJ_X) < self.joystick_drift_compensation):  # forward
             delta = 100 - self.offset
             if delta < 100:  # Map proportionally starting at offset instead of 0
                 SYT = self.offset + math.floor(LJ_Y * delta)
             else:
                 SYT = math.floor(LJ_Y * 100)
-        else:  # Go backward
+            PYT = SYT  # Going forward, both motors should be same values
+        elif ((quadrant_LJ == 3) or (quadrant_LJ == 4)) and (math.fabs(RJ_X) < self.joystick_drift_compensation):  # backward
             delta = -100 + self.offset
-            if delta > -100:  # Map proportionally starting at offset instead of 0
+            if delta > -100:
                 SYT = self.offset + math.ceil(LJ_Y * delta)
             else:
                 SYT = math.ceil(LJ_Y * -100)
-        PYT = SYT  # Y Thrusters should always be the same values for forward/backward
+            PYT = SYT
+        elif (math.fabs(RJ_X) > self.joystick_drift_compensation) and (RJ_X > 0):  # Turn to starboard
+            delta = 100 - self.offset
+            if delta < 100:
+                SYT = self.offset + math.ceil(RJ_X * -1 * delta)  # Reverse on Starboard Y Thruster
+                PYT = self.offset + math.floor(RJ_X * delta)  # Forward on Port Y Thruster
+        else:  # Turn to port
+            delta = 100 - self.offset
+            if delta < 100:
+                SYT = self.offset + math.floor(RJ_X * delta)  # Forward on Starboard Y Thruster
+                PYT = self.offset + math.ceil(RJ_X * -1 * delta)  # Reverse on Port Y Thruster
 
         # PFZT, SFZT, SAZT, PAZT are a function of LJ_X, RJ_X, and L2/R2
         PFZT = 0
