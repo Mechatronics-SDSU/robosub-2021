@@ -5,13 +5,13 @@ cd ..
 cd ..
 cd ..
 
-cp $(pwd)/src/Intelligence/Client_Docker/Dockerfile $(pwd)/Dockerfile
+cp "$(pwd)/src/Intelligence/Client_Docker/Dockerfile" "$(pwd)/Dockerfile"
 
 docker build . -t client_container
 #del Dockerfile
 
-docker run -dit --name client --network sc-arch --publish 65431:65431 --publish 50052:50052 client_container 
+docker run -dit --name client --publish 65432:65432 --publish 50051:50051 client_container 
 
 docker container attach client
 
-PING server_container
+
