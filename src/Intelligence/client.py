@@ -14,7 +14,7 @@ from src.inference_dir.gate_detector import GateDetector
 
 
 
-HOST = ''
+HOST = "0.0.0.0"
 PORT = 65432
 
 

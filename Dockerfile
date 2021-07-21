@@ -22,5 +22,5 @@ COPY . .
 
 #ENTRYPOINT ["python3"]
 
-CMD ["python3","/src/Intelligence/server.py"]
+CMD ["python3","/src/Intelligence/client.py"]
 
