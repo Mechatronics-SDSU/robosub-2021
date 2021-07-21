@@ -28,9 +28,10 @@ import numpy as np
 class ControllerTranslator:
     """Gets controller state as a numpy array and translates it into controls sent to the maestro.
     """
-    def __init__(self, offset=0, invert_controls=False, joystick_drift_compensation=0.05):
+    def __init__(self, offset=0, invert_controls=False, joystick_drift_compensation=0.05, base_net_turn=0):
         self.invert = invert_controls
         self.joystick_drift_compensation = joystick_drift_compensation
+        self.base_net_turn = base_net_turn
         self.offset = offset  # amount to offset ESCs by when performing translation.
         # Ex. ESC needs value of 50 to begin moving thrusters. Offset of 49 means 0 is mapped to 49.
 
@@ -69,60 +70,141 @@ class ControllerTranslator:
 
         # Cartesian quadrant the joysticks are in
         quadrant_LJ = 0
-        quadrant_RJ = 0
-        if (LJ_X >= 0) and (LJ_Y >= 0):
+        if ((LJ_X >= 0) and (LJ_Y >= 0)) and \
+                ((LJ_X > self.joystick_drift_compensation) or (LJ_Y > self.joystick_drift_compensation)):
             quadrant_LJ = 1
-        elif (LJ_X < 0) and (LJ_Y >= 0):
+        elif ((LJ_X < 0) and (LJ_Y >= 0)) and \
+                ((LJ_X > self.joystick_drift_compensation) or (LJ_Y > self.joystick_drift_compensation)):
             quadrant_LJ = 2
-        elif (LJ_X < 0) and (LJ_Y < 0):
+        elif ((LJ_X < 0) and (LJ_Y < 0)) and \
+                ((LJ_X > self.joystick_drift_compensation) or (LJ_Y > self.joystick_drift_compensation)):
             quadrant_LJ = 3
-        else:
+        elif ((LJ_X >= 0) and (LJ_Y < 0)) and \
+                ((LJ_X > self.joystick_drift_compensation) or (LJ_Y > self.joystick_drift_compensation)):
             quadrant_LJ = 4
-        if (RJ_X >= 0) and (RJ_Y >= 0):
-            quadrant_RJ = 1
-        elif (RJ_X < 0) and (RJ_Y >= 0):
-            quadrant_RJ = 2
-        elif (RJ_X < 0) and (RJ_Y < 0):
-            quadrant_RJ = 3
-        else:
-            quadrant_RJ = 4
 
         # Translate
+
         # SYT/PYT is a function of LJY and RJX
         SYT = 0
         PYT = 0
-        if ((quadrant_LJ == 1) or (quadrant_LJ == 2)) and (math.fabs(RJ_X) < self.joystick_drift_compensation):  # forward
-            delta = 100 - self.offset
+        delta = 100 - self.offset
+        if ((quadrant_LJ == 1) or (quadrant_LJ == 2)) and (math.fabs(RJ_X) <= self.joystick_drift_compensation):  # Forward
             if delta < 100:  # Map proportionally starting at offset instead of 0
                 SYT = self.offset + math.floor(LJ_Y * delta)
             else:
                 SYT = math.floor(LJ_Y * 100)
             PYT = SYT  # Going forward, both motors should be same values
-        elif ((quadrant_LJ == 3) or (quadrant_LJ == 4)) and (math.fabs(RJ_X) < self.joystick_drift_compensation):  # backward
-            delta = -100 + self.offset
+        elif ((quadrant_LJ == 3) or (quadrant_LJ == 4)) and (math.fabs(RJ_X) <= self.joystick_drift_compensation):  # Backward
             if delta > -100:
                 SYT = self.offset + math.ceil(LJ_Y * delta)
             else:
                 SYT = math.ceil(LJ_Y * -100)
             PYT = SYT
-        elif (math.fabs(RJ_X) > self.joystick_drift_compensation) and (RJ_X > 0):  # Turn to starboard
-            delta = 100 - self.offset
+        elif ((quadrant_LJ == 1) or (quadrant_LJ == 2)) and (RJ_X > self.joystick_drift_compensation):  # Turn to starboard
+            if delta < 100:
+                net_turn = LJ_Y - RJ_X + self.base_net_turn
+                if net_turn >= self.base_net_turn:
+                    if net_turn > 1:
+                        net_turn = 1
+                    SYT = self.offset + math.floor(net_turn * delta)
+                else:
+                    SYT = self.base_net_turn
+                PYT = self.offset + math.floor(LJ_Y * delta)
+            else:
+                net_turn = LJ_Y - RJ_X + self.base_net_turn
+                if net_turn >= self.base_net_turn:
+                    if net_turn > 1:
+                        net_turn = 1
+                    SYT = math.floor(net_turn * 100)
+                else:
+                    SYT = self.base_net_turn
+                PYT = math.floor(LJ_Y * 100)
+        elif ((quadrant_LJ == 1) or (quadrant_LJ == 2)) and (RJ_X < (-1 * self.joystick_drift_compensation)):  # Turn to port
+            if delta < 100:
+                net_turn = LJ_Y + RJ_X + self.base_net_turn
+                if net_turn >= self.base_net_turn:
+                    if net_turn > 1:
+                        net_turn = 1
+                    PYT = self.offset + math.floor(net_turn * delta)
+                else:
+                    PYT = self.base_net_turn
+                SYT = self.offset + math.floor(LJ_Y * delta)
+            else:
+                net_turn = LJ_Y + RJ_X + self.base_net_turn
+                if net_turn >= self.base_net_turn:
+                    if net_turn > 1:
+                        net_turn = 1
+                    PYT = math.floor(net_turn * 100)
+                else:
+                    PYT = self.base_net_turn
+                SYT = math.floor(LJ_Y * 100)
+        elif ((quadrant_LJ == 3) or (quadrant_LJ == 4)) and (RJ_X > self.joystick_drift_compensation):  # Inverted turn to port
+            if delta < 100:
+                net_turn = (-1 * LJ_Y) + RJ_X + self.base_net_turn
+                if net_turn >= self.base_net_turn:
+                    if net_turn > 1:
+                        net_turn = 1
+                    SYT = self.offset + (-1 * math.floor(net_turn * delta))
+                else:
+                    SYT = self.base_net_turn
+                PYT = math.ceil(LJ_Y * delta)
+            else:
+                net_turn = (-1 * LJ_Y) + RJ_X + self.base_net_turn
+                if net_turn >= self.base_net_turn:
+                    if net_turn > 1:
+                        net_turn = 1
+                    SYT = -1 * math.floor(net_turn * 100)
+                else:
+                    SYT = self.base_net_turn
+                PYT = math.ceil(LJ_Y * 100)
+        elif ((quadrant_LJ == 3) or (quadrant_LJ == 4)) and (RJ_X < (-1 * self.joystick_drift_compensation)):  # Inverted turn to starboard
+            if delta < 100:
+                net_turn = (-1 * LJ_Y) - RJ_X + self.base_net_turn
+                if net_turn >= self.base_net_turn:
+                    if net_turn > 1:
+                        net_turn = 1
+                    PYT = (-1 * math.floor(net_turn * delta))
+                else:
+                    PYT = self.base_net_turn
+                SYT = math.ceil(LJ_Y * delta)
+            else:
+                net_turn = (-1 * LJ_Y) - RJ_X + self.base_net_turn
+                if net_turn >= self.base_net_turn:
+                    if net_turn > 1:
+                        net_turn = 1
+                    PYT = -1 * math.floor(net_turn * 100)
+                else:
+                    PYT = self.base_net_turn
+                SYT = math.ceil(LJ_Y * 100)
+        elif (math.fabs(RJ_X) > self.joystick_drift_compensation) and (RJ_X > 0):  # Turn in-place to starboard
             if delta < 100:
                 SYT = self.offset + math.ceil(RJ_X * -1 * delta)  # Reverse on Starboard Y Thruster
                 PYT = self.offset + math.floor(RJ_X * delta)  # Forward on Port Y Thruster
-        else:  # Turn to port
-            delta = 100 - self.offset
+            else:
+                SYT = math.ceil(RJ_X * -100)
+                PYT = math.floor(RJ_X * 100)
+        elif (math.fabs(RJ_X) > self.joystick_drift_compensation) and (RJ_X < 0):  # Turn in-place to port
             if delta < 100:
                 SYT = self.offset + math.floor(RJ_X * delta)  # Forward on Starboard Y Thruster
                 PYT = self.offset + math.ceil(RJ_X * -1 * delta)  # Reverse on Port Y Thruster
+            else:
+                SYT = math.floor(RJ_X * 100)
+                PYT = math.ceil(RJ_X * -100)
+        else:  # No movement
+            SYT = 0
+            PYT = 0
 
-        # PFZT, SFZT, SAZT, PAZT are a function of LJ_X, RJ_X, and L2/R2
+        # PFZT, SFZT, SAZT, PAZT are a function of LJ_X and L2/R2
         PFZT = 0
         SFZT = 0
         SAZT = 0
         PAZT = 0
 
-        # Add some kind of trig function here?
+        if (z_abs > 0) and (z_dir == 1):  # Go up
+            pass
+        elif (z_abs > 0) and (z_dir == -1):  # Go down
+            pass
 
         return [PFZT, SFZT, SYT, SAZT, PAZT, PYT]
 
@@ -139,7 +221,22 @@ def _driver_test_code():
     pg.init()
     pg.joystick.init()
     js = pg.joystick.Joystick(0)
-    print(js)
+    js.init()
+    print(str(js.get_numaxes()) + ' ' + str(js.get_numbuttons()) + ' ' + str(js.get_numhats()))
+    ct = ControllerTranslator()
+    while True:
+        if js.get_init():
+            control_in = np.zeros(shape=(1, js.get_numaxes()
+                                        + js.get_numbuttons()
+                                        + js.get_numhats()))
+            for i in range(js.get_numaxes()):
+                control_in.put(i, js.get_axis(i))
+            for i in range(js.get_numaxes(), js.get_numbuttons()):  # Buttons
+                control_in.put(i, js.get_button(i - js.get_numaxes()))
+
+            control_in.put((js.get_numaxes() + js.get_numbuttons()), js.get_hat(0))  # Hat
+            print(ct.translate_to_maestro_controller(control_in))
+        pg.event.pump()
 
 
 if __name__ == '__main__':
