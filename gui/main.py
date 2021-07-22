@@ -58,6 +58,8 @@ import PIL.Image
 import grpc
 import socket
 from datetime import datetime
+
+import controller_translator
 import time
 import subprocess as sub
 from functools import partial
@@ -83,6 +85,7 @@ import src.utils.ip_config as ip_config
 import src.utils.logger as sub_logging
 import src.utils.telemetry as sensor_tel
 import src.utils.pilot as ctrl_pilot
+import src.utils.controller_translator
 import src.utils.command_configuration as cmd
 
 
@@ -235,6 +238,10 @@ class Window(tk.Frame):
         pg.joystick.init()
         self.js = pg.joystick.Joystick(0)
         self.js.init()
+        self.ct = controller_translator.ControllerTranslator(
+            joystick_drift_compensation=0.1,
+            base_net_turn=20,
+            base_net_strafe=-20)
 
         # Main window
         tk.Frame.__init__(self, master)
@@ -371,12 +378,14 @@ class Window(tk.Frame):
             self.telemetry_current_state.sensors['kill_button']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
 
         # Controller Window
-        self.controller_window = tk.Frame(master=self.master, width=640, height=350, bg='white')
+        self.controller_window = tk.Frame(master=self.master, width=300, height=110, bg='white')
+        self.thruster_window = tk.Frame(master=self.master, width=350, height=110, bg='white')
         self.controller_window_buttons = tk.Frame(master=self.controller_window, width=640, height=350, bg='white')
         self.controller_window_joysticks_l = tk.Frame(master=self.controller_window)
         self.controller_window_joysticks_r = tk.Frame(master=self.controller_window)
         # Controller inputs
         self.current_control_inputs = None
+        self.maestro_controls = None
         self.ctrl_n_button = tk.Button(master=self.controller_window_buttons, text='  N  ', bg='white')
         self.ctrl_s_button = tk.Button(master=self.controller_window_buttons, text='  S  ', bg='white')
         self.ctrl_e_button = tk.Button(master=self.controller_window_buttons, text='  E  ', bg='white')
@@ -419,7 +428,15 @@ class Window(tk.Frame):
         self.joystick_frame_counter = 0
         self.joystick_window_l_img = self.joystick_l.create_image((2, 2), anchor=tk.NW, image=self.joystick_l_img)
         self.joystick_window_r_img = self.joystick_r.create_image((2, 2), anchor=tk.NW, image=self.joystick_r_img)
-
+        # Controller outputs to maestro
+        self.thruster_canvas = tk.Canvas(master=self.thruster_window, width=173, height=130, bg='green')
+        self.thruster_canvas_lpad = tk.Canvas(master=self.thruster_window, width=12, height=130, bg='green')
+        self.thruster_img_1 = ImageTk.PhotoImage(PILImage.open('img/maestro_no_conn.png'))
+        self.thruster_img_2 = ImageTk.PhotoImage(PILImage.open('img/maestro_no_conn.png'))
+        self.thruster_img_lpad = ImageTk.PhotoImage(PILImage.open('img/lpad.png'))
+        self.thruster_frame_counter = 0
+        self.thruster_window_img = self.thruster_canvas.create_image((2, 2), anchor=tk.NW, image=self.thruster_img_1)
+        self.thruster_canvas_lpad.create_image((2, 2), anchor=tk.NW, image=self.thruster_img_lpad)
         # Data I/O to other processes
         self.in_pipe = None
         self.out_pipe = None
@@ -556,7 +573,8 @@ class Window(tk.Frame):
         self.kill_button_val.grid(column=0, row=11, sticky=W)
 
         # Controller Window
-        self.controller_window.grid(column=0, row=2)
+        self.controller_window.grid(column=0, row=2, sticky=W)
+        self.thruster_window.grid(column=0, row=3, sticky=W)
         self.controller_window_joysticks_l.grid(column=0, row=0)
         self.controller_window_buttons.grid(column=1, row=0)
         self.controller_window_joysticks_r.grid(column=2, row=0)
@@ -579,6 +597,9 @@ class Window(tk.Frame):
         self.ctrl_r1_button.grid(column=0, row=1)
         self.joystick_r_text.grid(column=1, row=2)
         self.joystick_r.grid(column=0, row=2)
+
+        self.thruster_canvas_lpad.grid(column=0, row=0)
+        self.thruster_canvas.grid(column=1, row=0)
 
     @staticmethod
     def diag_box(message):
@@ -867,6 +888,7 @@ class Window(tk.Frame):
 
     def send_controller_state(self):
         """Sends current controller state to Pilot process
+        Updates frames
         """
         if self.js.get_init() and self.pilot_socket_is_connected:
             control_in = np.zeros(shape=(1,
@@ -880,7 +902,7 @@ class Window(tk.Frame):
             control_in.put((self.js.get_numaxes() + self.js.get_numbuttons()), self.js.get_hat(0))  # Hat
             self.current_control_inputs = control_in
             self.pilot_pipe_out.send((control_in.tobytes()))
-
+            self.maestro_controls = self.ct.translate_to_maestro_controller(self.current_control_inputs)
             # L2/R2 threshold update
             button_frame = cv2.imread('img/l2r2_base.png')
             button_frame_2 = cv2.imread('img/l2r2_base.png')
@@ -1133,6 +1155,45 @@ class Window(tk.Frame):
                 self.ctrl_r_button.configure(self.ctrl_r_button, bg='red')
             elif self.ctrl_r_button.config('bg')[4] == 'red' and (0 == int(self.current_control_inputs[0, 13])):
                 self.ctrl_r_button.configure(self.ctrl_r_button, bg='white')
+
+            # Thruster update
+            thruster_frame = cv2.imread('img/maestro_conn.png')
+            thruster_remap = [self.maestro_controls[0],
+                     self.maestro_controls[1],
+                     self.maestro_controls[5],
+                     self.maestro_controls[2],
+                     self.maestro_controls[4],
+                     self.maestro_controls[3]]
+            halves = [0, 0, 0, 0, 0, 0]
+            x_bot_vals = [3, 32, 61, 90, 119, 148]
+            x_top_vals = [24, 53, 82, 111, 140, 169]
+            for i in range(len(thruster_remap)):
+                if thruster_remap[i] > 0:
+                    halves[i] = 1
+                    px_add_y_count = -1 * math.ceil(math.fabs(thruster_remap[i] / 2) - 50)
+                    thruster_frame = cv2.rectangle(img=thruster_frame,
+                                            pt1=(x_bot_vals[i], 53),
+                                            pt2=(x_top_vals[i], int(3 + px_add_y_count)),
+                                            color=(0, 0, 255),
+                                            thickness=-1)
+                elif thruster_remap[i] < 0:
+                    halves[i] = -1
+                    thruster_remap[i] = math.fabs(thruster_remap[i])
+                    px_add_y_count = math.ceil(thruster_remap[i] / 2)
+                    thruster_frame = cv2.rectangle(img=thruster_frame,
+                                                   pt1=(x_top_vals[i], 55),
+                                                   pt2=(x_bot_vals[i], int(55 + px_add_y_count)),
+                                                   color=(0, 0, 255),
+                                                   thickness=-1)
+                else:
+                    pass
+            self.thruster_frame_counter += 1
+            if self.thruster_frame_counter % 2 == 1:
+                self.thruster_img_2 = ImageTk.PhotoImage(PILImage.fromarray(thruster_frame))
+                self.thruster_canvas.itemconfig(self.thruster_window_img, image=self.thruster_img_2)
+            else:
+                self.thruster_img_1 = ImageTk.PhotoImage(PILImage.fromarray(thruster_frame))
+                self.thruster_canvas.itemconfig(self.thruster_window_img, image=self.thruster_img_1)
 
     def update_telemetry(self):
         """Updates the telemetry window.

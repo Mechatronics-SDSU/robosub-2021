@@ -28,6 +28,7 @@ import numpy as np
 class ControllerTranslator:
     """Gets controller state as a numpy array and translates it into controls sent to the maestro.
     """
+
     def __init__(self,
                  offset=0,
                  invert_controls=False,
@@ -40,8 +41,8 @@ class ControllerTranslator:
         self.base_net_turn = base_net_turn
         self.z_drift_compensation = z_drift_compensation
         self.base_net_strafe = base_net_strafe
-        self.offset = offset  # amount to offset ESCs by when performing translation.
-        # Ex. ESC needs value of 50 to begin moving thrusters. Offset of 49 means 0 is mapped to 49.
+        self.offset = offset  # amount to offset ESCs by when performing translation
+        # Ex. ESC needs value of 50 to begin moving thrusters. Offset of 49 means 0 is mapped to 49
 
     def translate_to_maestro_controller(self, inputs) -> list:
         """Accepts a numpy array from pygame controller, translates into maestro instructions.
