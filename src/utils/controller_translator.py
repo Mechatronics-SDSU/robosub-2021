@@ -28,22 +28,26 @@ import numpy as np
 class ControllerTranslator:
     """Gets controller state as a numpy array and translates it into controls sent to the maestro.
     """
-    def __init__(self, offset=0, invert_controls=False, joystick_drift_compensation=0.05, base_net_turn=0):
+    def __init__(self,
+                 offset=0,
+                 invert_controls=False,
+                 joystick_drift_compensation=0.05,
+                 base_net_turn=0,
+                 z_drift_compensation=0,
+                 base_net_strafe=0):
         self.invert = invert_controls
         self.joystick_drift_compensation = joystick_drift_compensation
         self.base_net_turn = base_net_turn
+        self.z_drift_compensation = z_drift_compensation
+        self.base_net_strafe = base_net_strafe
         self.offset = offset  # amount to offset ESCs by when performing translation.
         # Ex. ESC needs value of 50 to begin moving thrusters. Offset of 49 means 0 is mapped to 49.
 
-    def translate_to_maestro_controller(self, inputs):
+    def translate_to_maestro_controller(self, inputs) -> list:
         """Accepts a numpy array from pygame controller, translates into maestro instructions.
         :return: list of instructions for the maestro
         """
-        # Base values, default to 0 for non moving state
-        result_x = 0.0  # Function of LJ/RJ
-        result_y = 0.0  # Function of LJ/RJ
-        result_z = 0.0  # Function of L2/R2
-        result = [0, 0, 0, 0, 0, 0]
+
         # Z
         L2 = inputs[0][4]
         R2 = inputs[0][5]
@@ -51,7 +55,7 @@ class ControllerTranslator:
         LJ_X = inputs[0][0]
         LJ_Y = inputs[0][1]
         RJ_X = inputs[0][2]
-        RJ_Y = inputs[0][3]
+        RJ_Y = inputs[0][3]  # Currently unused
 
         # Calculate Z
         z_abs = 0
@@ -201,20 +205,35 @@ class ControllerTranslator:
         SAZT = 0
         PAZT = 0
 
-        if (z_abs > 0) and (z_dir == 1):  # Go up
-            pass
-        elif (z_abs > 0) and (z_dir == -1):  # Go down
-            pass
+        if (z_abs > self.z_drift_compensation) and (z_dir == 1):  # Ascend
+            PFZT = SFZT = SAZT = PAZT = math.floor(100 * z_abs)
+        elif (z_abs > self.z_drift_compensation) and (z_dir == -1):  # Descend
+            PFZT = SFZT = SAZT = PAZT = math.ceil(-100 * z_abs)
+        elif (LJ_X > self.joystick_drift_compensation) and (z_abs <= self.z_drift_compensation):  # Strafe to Starboard
+            if delta < 100:
+                SFZT = SAZT = (-1 * self.offset) + math.ceil(LJ_X * -1 * delta)
+                PAZT = PFZT = (-1 * self.offset) + self.base_net_strafe
+            else:
+                SFZT = SAZT = math.ceil(LJ_X * -100)
+                PAZT = PFZT = math.ceil(self.base_net_strafe)
+        elif ((-1 * LJ_X) > self.joystick_drift_compensation) and (z_abs <= self.z_drift_compensation):  # Strafe to Port
+            if delta < 100:
+                PAZT = PFZT = (-1 * self.offset) + math.ceil(LJ_X * -1 * delta)
+                SFZT = SAZT = (-1 * self.offset) + self.base_net_strafe
+            else:
+                PAZT = PFZT = math.ceil(LJ_X * 100)
+                SFZT = SAZT = math.ceil(self.base_net_strafe)
 
         return [PFZT, SFZT, SYT, SAZT, PAZT, PYT]
 
     def translate_to_maestro_intelligence(self):
         """Accepts instructions sent from intelligence, translates into maestro instructions.
+        (Might not need this?)
         """
         pass
 
 
-def _driver_test_code():
+def _driver_test_code() -> None:
     """Test code using controller inputs directly. Don't run in other modules!
     """
     import pygame as pg
@@ -223,7 +242,7 @@ def _driver_test_code():
     js = pg.joystick.Joystick(0)
     js.init()
     print(str(js.get_numaxes()) + ' ' + str(js.get_numbuttons()) + ' ' + str(js.get_numhats()))
-    ct = ControllerTranslator(joystick_drift_compensation=0.1, base_net_turn=10)
+    ct = ControllerTranslator(joystick_drift_compensation=0.1, base_net_turn=10, base_net_strafe=-20)
     while True:
         if js.get_init():
             control_in = np.zeros(shape=(1, js.get_numaxes()
