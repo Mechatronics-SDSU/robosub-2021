@@ -110,7 +110,7 @@ class ControllerTranslator:
                     SYT = self.offset + math.floor(net_turn * delta)
                 else:
                     SYT = self.base_net_turn
-                PYT = self.offset + math.floor(LJ_Y * delta)
+                PYT = self.offset + math.ceil(-1 * LJ_Y * delta)
             else:
                 net_turn = LJ_Y - RJ_X + self.base_net_turn
                 if net_turn >= self.base_net_turn:
@@ -119,7 +119,7 @@ class ControllerTranslator:
                     SYT = math.floor(net_turn * 100)
                 else:
                     SYT = self.base_net_turn
-                PYT = math.floor(LJ_Y * 100)
+                PYT = math.ceil(-1 * LJ_Y * 100)
         elif ((quadrant_LJ == 1) or (quadrant_LJ == 2)) and (RJ_X < (-1 * self.joystick_drift_compensation)):  # Turn to port
             if delta < 100:
                 net_turn = LJ_Y + RJ_X + self.base_net_turn
@@ -129,7 +129,7 @@ class ControllerTranslator:
                     PYT = self.offset + math.floor(net_turn * delta)
                 else:
                     PYT = self.base_net_turn
-                SYT = self.offset + math.floor(LJ_Y * delta)
+                SYT = self.offset + math.ceil(-1 * LJ_Y * delta)
             else:
                 net_turn = LJ_Y + RJ_X + self.base_net_turn
                 if net_turn >= self.base_net_turn:
@@ -138,10 +138,10 @@ class ControllerTranslator:
                     PYT = math.floor(net_turn * 100)
                 else:
                     PYT = self.base_net_turn
-                SYT = math.floor(LJ_Y * 100)
+                SYT = math.ceil(-1 * LJ_Y * 100)
         elif ((quadrant_LJ == 3) or (quadrant_LJ == 4)) and (RJ_X > self.joystick_drift_compensation):  # Inverted turn to port
             if delta < 100:
-                net_turn = (-1 * LJ_Y) + RJ_X + self.base_net_turn
+                net_turn = (-1 * LJ_Y) - RJ_X + self.base_net_turn
                 if net_turn >= self.base_net_turn:
                     if net_turn > 1:
                         net_turn = 1
@@ -150,17 +150,17 @@ class ControllerTranslator:
                     SYT = self.base_net_turn
                 PYT = math.ceil(LJ_Y * delta)
             else:
-                net_turn = (-1 * LJ_Y) + RJ_X + self.base_net_turn
+                net_turn = (-1 * LJ_Y) - RJ_X + self.base_net_turn
                 if net_turn >= self.base_net_turn:
                     if net_turn > 1:
                         net_turn = 1
-                    SYT = -1 * math.floor(net_turn * 100)
+                    SYT = math.floor(net_turn * 100)
                 else:
                     SYT = self.base_net_turn
-                PYT = math.ceil(LJ_Y * 100)
+                PYT = math.floor(LJ_Y * 100)
         elif ((quadrant_LJ == 3) or (quadrant_LJ == 4)) and (RJ_X < (-1 * self.joystick_drift_compensation)):  # Inverted turn to starboard
             if delta < 100:
-                net_turn = (-1 * LJ_Y) - RJ_X + self.base_net_turn
+                net_turn = (-1 * LJ_Y) + RJ_X + self.base_net_turn
                 if net_turn >= self.base_net_turn:
                     if net_turn > 1:
                         net_turn = 1
@@ -169,7 +169,7 @@ class ControllerTranslator:
                     PYT = self.base_net_turn
                 SYT = math.ceil(LJ_Y * delta)
             else:
-                net_turn = (-1 * LJ_Y) - RJ_X + self.base_net_turn
+                net_turn = (-1 * LJ_Y) + RJ_X + self.base_net_turn
                 if net_turn >= self.base_net_turn:
                     if net_turn > 1:
                         net_turn = 1
@@ -223,7 +223,7 @@ def _driver_test_code():
     js = pg.joystick.Joystick(0)
     js.init()
     print(str(js.get_numaxes()) + ' ' + str(js.get_numbuttons()) + ' ' + str(js.get_numhats()))
-    ct = ControllerTranslator(joystick_drift_compensation=0.1)
+    ct = ControllerTranslator(joystick_drift_compensation=0.1, base_net_turn=10)
     while True:
         if js.get_init():
             control_in = np.zeros(shape=(1, js.get_numaxes()
