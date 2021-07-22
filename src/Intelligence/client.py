@@ -27,10 +27,12 @@ class Spawn():
 		
 		
 	def run(self):
-		channel = grpc.insecure_channel('50051')
+		channel = grpc.insecure_channel('0.0.0.0:50051')
 		stub = buffer_pb2_grpc.Response_ServiceStub(channel)
 		response_string = b"start"
+		print("Start Command")
 		stub.Info(buffer_pb2.Send_Request(send=response_string))
+		print("Sending")
 		term_socket()
 				
 

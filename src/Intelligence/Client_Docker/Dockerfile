@@ -14,6 +14,7 @@ RUN apt-get install tmux -y
 
 ENV PYTHONPATH="${PYTHONPATH}:/"
 
+EXPOSE 50051
 
 ADD ./ ./
 WORKDIR .

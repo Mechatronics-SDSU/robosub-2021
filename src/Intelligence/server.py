@@ -19,7 +19,7 @@ import subprocess
 from src.inference_dir.gate_detector import GateDetector
 
 
-HOST = ''
+HOST = "0.0.0.0"
 PORT = 65432
 
 gate_detector = GateDetector()
@@ -34,6 +34,7 @@ class Listener(buffer_pb2_grpc.Response_ServiceServicer):
 
     def Info(self, request, context):
         retriever = request.send
+        print("Retrieved")
         decode = retriever.decode("utf-8")
         if  decode == "start":
             self.p = Process(target=process, args=(cap,))

@@ -11,8 +11,8 @@ cp "$(pwd)/src/Intelligence/Server_Docker/Dockerfile" "$(pwd)/Dockerfile"
 docker build . -t server_container
 #del Dockerfile
 
+docker network create sc-arch
 
-docker run -dit --name server --publish 65431:65431 --publish 50052:50052 server_container 
+docker run -dit --name server --publish 65432:65432 --network=sc-arch server_container 
 
 docker container attach server
-
