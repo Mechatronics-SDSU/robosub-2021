@@ -70,16 +70,16 @@ class ControllerTranslator:
 
         # Cartesian quadrant the joysticks are in
         quadrant_LJ = 0
-        if ((LJ_X >= 0) and (LJ_Y >= 0)) and \
-                ((LJ_X > self.joystick_drift_compensation) or (LJ_Y > self.joystick_drift_compensation)):
+        if ((LJ_X >= 0) and (LJ_Y < 0)) and \
+                ((LJ_X > self.joystick_drift_compensation) or (math.fabs(LJ_Y) > self.joystick_drift_compensation)):
             quadrant_LJ = 1
-        elif ((LJ_X < 0) and (LJ_Y >= 0)) and \
-                ((LJ_X > self.joystick_drift_compensation) or (LJ_Y > self.joystick_drift_compensation)):
-            quadrant_LJ = 2
         elif ((LJ_X < 0) and (LJ_Y < 0)) and \
-                ((LJ_X > self.joystick_drift_compensation) or (LJ_Y > self.joystick_drift_compensation)):
+                ((math.fabs(LJ_X) > self.joystick_drift_compensation) or (math.fabs(LJ_Y) > self.joystick_drift_compensation)):
+            quadrant_LJ = 2
+        elif ((LJ_X < 0) and (LJ_Y >= 0)) and \
+                ((math.fabs(LJ_X) > self.joystick_drift_compensation) or (LJ_Y > self.joystick_drift_compensation)):
             quadrant_LJ = 3
-        elif ((LJ_X >= 0) and (LJ_Y < 0)) and \
+        elif ((LJ_X >= 0) and (LJ_Y >= 0)) and \
                 ((LJ_X > self.joystick_drift_compensation) or (LJ_Y > self.joystick_drift_compensation)):
             quadrant_LJ = 4
 
@@ -91,15 +91,15 @@ class ControllerTranslator:
         delta = 100 - self.offset
         if ((quadrant_LJ == 1) or (quadrant_LJ == 2)) and (math.fabs(RJ_X) <= self.joystick_drift_compensation):  # Forward
             if delta < 100:  # Map proportionally starting at offset instead of 0
-                SYT = self.offset + math.floor(LJ_Y * delta)
+                SYT = self.offset + math.floor(math.fabs(LJ_Y) * delta)
             else:
-                SYT = math.floor(LJ_Y * 100)
+                SYT = math.floor(math.fabs(LJ_Y) * 100)
             PYT = SYT  # Going forward, both motors should be same values
         elif ((quadrant_LJ == 3) or (quadrant_LJ == 4)) and (math.fabs(RJ_X) <= self.joystick_drift_compensation):  # Backward
-            if delta > -100:
-                SYT = self.offset + math.ceil(LJ_Y * delta)
+            if delta < 100:
+                SYT = self.offset + math.ceil(-1 * LJ_Y * delta)
             else:
-                SYT = math.ceil(LJ_Y * -100)
+                SYT = math.ceil(-1 * LJ_Y * 100)
             PYT = SYT
         elif ((quadrant_LJ == 1) or (quadrant_LJ == 2)) and (RJ_X > self.joystick_drift_compensation):  # Turn to starboard
             if delta < 100:
@@ -186,11 +186,11 @@ class ControllerTranslator:
                 PYT = math.floor(RJ_X * 100)
         elif (math.fabs(RJ_X) > self.joystick_drift_compensation) and (RJ_X < 0):  # Turn in-place to port
             if delta < 100:
-                SYT = self.offset + math.floor(RJ_X * delta)  # Forward on Starboard Y Thruster
-                PYT = self.offset + math.ceil(RJ_X * -1 * delta)  # Reverse on Port Y Thruster
+                SYT = self.offset + math.floor(RJ_X * -1 * delta)  # Forward on Starboard Y Thruster
+                PYT = self.offset + math.ceil(RJ_X * delta)  # Reverse on Port Y Thruster
             else:
-                SYT = math.floor(RJ_X * 100)
-                PYT = math.ceil(RJ_X * -100)
+                SYT = math.floor(RJ_X * -100)
+                PYT = math.ceil(RJ_X * 100)
         else:  # No movement
             SYT = 0
             PYT = 0
@@ -223,7 +223,7 @@ def _driver_test_code():
     js = pg.joystick.Joystick(0)
     js.init()
     print(str(js.get_numaxes()) + ' ' + str(js.get_numbuttons()) + ' ' + str(js.get_numhats()))
-    ct = ControllerTranslator()
+    ct = ControllerTranslator(joystick_drift_compensation=0.1)
     while True:
         if js.get_init():
             control_in = np.zeros(shape=(1, js.get_numaxes()
