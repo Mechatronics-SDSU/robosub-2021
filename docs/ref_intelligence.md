@@ -5,6 +5,11 @@
 2. run the runclient.sh in MechatronicsRobosub2021/src/Intelligence/Client_Docker/
 <h4>
 
+<h4>
+  Docker containers are utilized to avoid dependency issues
+ <h4>
+  
+  
 <h1>Connections<h1>
   
 PORT | PROTOCOL | FUNCTION
