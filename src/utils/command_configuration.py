@@ -115,7 +115,7 @@ class CommandConfiguration:
         """
         return 'Command Configuration object ' + \
                ' Socket codes:' + str(self.socket_codes) + \
-               ' Pilot control: ' + str(self.pilot_control) + \
+               ' Pilot_Testing control: ' + str(self.pilot_control) + \
                ' Mission selected: ' + str(self.mission)
 
 

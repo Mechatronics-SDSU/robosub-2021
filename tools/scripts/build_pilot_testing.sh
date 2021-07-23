@@ -2,8 +2,8 @@
 echo "Setting up Pilot Container"
 cd ..
 cd ..
-cp "$(pwd)/dockerfiles/Pilot/Dockerfile" "$(pwd)/Dockerfile"
-cp "$(pwd)/dockerfiles/Pilot/requirements.txt" "$(pwd)/requirements.txt"
+cp "$(pwd)/dockerfiles/Pilot_Testing/Dockerfile" "$(pwd)/Dockerfile"
+cp "$(pwd)/dockerfiles/Pilot_Testing/requirements.txt" "$(pwd)/requirements.txt"
 docker build . -t pilot_container
 rm Dockerfile
 rm requirements.txt

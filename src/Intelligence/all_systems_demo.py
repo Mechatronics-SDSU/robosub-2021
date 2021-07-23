@@ -108,7 +108,7 @@ def telemetry_process(pipe_in_from_main, pipe_out_to_main):
 
 
 def pilot_process(pipe_in_from_main, pipe_out_to_main):
-    """Pilot work
+    """Pilot_Testing work
     """
     started = False
     while True:
@@ -230,10 +230,10 @@ def main():
                 main_pipe_to_telemetry.send(('telemetry', 'main', 'initialize', recv_cmd.telemetry_code))
             elif proc_telemetry.is_alive():
                 main_pipe_to_telemetry.send(('telemetry', 'main', 'modify', recv_cmd.telemetry_code))
-            # Pilot
+            # Pilot_Testing
             if recv_cmd.pilot_control and (not proc_pilot.is_alive()):  # Turn on pilot process and socket
                 proc_pilot.start()
-                print('Started Pilot')
+                print('Started Pilot_Testing')
                 # Send if pilot is enabled
                 main_pipe_to_pilot.send(('pilot', 'main', 'initialize', recv_cmd.pilot_control))
             elif proc_pilot.is_alive():

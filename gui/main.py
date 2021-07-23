@@ -1588,7 +1588,8 @@ def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui):
                     s.connect((hostname, port))
                     server_conn = True
                     pilot_pipe_out.send(('gui', 'pilot', 'conn_socket'))
-                except ConnectionRefusedError:
+                except ConnectionRefusedError as e:
+                    print(e)
                     pilot_pipe_out.send(('gui', 'pilot', 'no_conn_socket'))
                     rcon_try_count += 1
                     logger.log('[@PLT] ERROR: Failed to connect to remote server. '
@@ -1599,17 +1600,20 @@ def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui):
                 while server_conn:
                     try:
                         data = s.recv(1024)
-                    except (ConnectionAbortedError, ConnectionResetError) as e:
+                    except (ConnectionAbortedError, ConnectionResetError):
+                        print(e)
                         pilot_pipe_out.send(('gui', 'pilot', 'no_conn_socket'))
                         server_conn = False
                         break
                     if data == b'1':
+                        data = None
                         controller_input = mp.connection.wait([pipe_in_from_gui], timeout=-1)
                         if len(controller_input) > 0:
                             last_input = controller_input[len(controller_input)-1].recv()
                             try:
                                 s.sendall(last_input)
-                            except (ConnectionAbortedError, ConnectionResetError) as e:
+                            except (ConnectionAbortedError, ConnectionResetError):
+                                print(e)
                                 pilot_pipe_out.send(('gui', 'pilot', 'no_conn_socket'))
                                 server_conn = False
                                 break
@@ -1618,15 +1622,17 @@ def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui):
                             try:
                                 s.sendall(last_input)
                             except (ConnectionAbortedError, ConnectionResetError) as e:
+                                print(e)
                                 pilot_pipe_out.send(('gui', 'pilot', 'no_conn_socket'))
                                 server_conn = False
                                 break
+                    else:
+                        pilot_pipe_out.send(('gui', 'pilot', 'no_conn_socket'))
+                        server_conn = False
+                        break
                     controller_input = mp.connection.wait([pipe_in_from_gui], timeout=-1)
                     if len(controller_input) > 0:
                         controller_input.clear()
-                controller_input = mp.connection.wait([pipe_in_from_gui], timeout=-1)
-                if len(controller_input) > 0:
-                    controller_input.clear()
 
 
 def router(logger,  # Gui logger

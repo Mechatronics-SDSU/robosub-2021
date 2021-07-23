@@ -1,6 +1,6 @@
 """Implements a client for receiving pilot control input on the SUB.
 
-Pilot client accepts a socket connection and receives controller input from HOST.
+Pilot_Testing client accepts a socket connection and receives controller input from HOST.
 This is encapsulated in a Controller object for convenient method access with
 options for configurations.
 
@@ -14,17 +14,26 @@ This is to prevent confusion between different configurations and mappings.
 """
 
 from __future__ import print_function
+import os
 import sys
 import socket
 import struct
 
 
+import src.utils.maestro_driver as maestro_driver
+
+
 port = 50004
 
 
-def run_client():
+def run_client() -> None:
     """Client's driver code
     """
+    dev = None  # Maestro device
+    maestro = None  # Maestro object
+    if (os.name != 'nt') and (len(sys.argv) > 1):  # Windows check and see if we got a device
+        dev = sys.argv[1].replace(' ', '')
+        maestro = maestro_driver.MaestroDriver(com_port=dev)
     started = True
     data = None
     payload_size = struct.calcsize('>6b')
@@ -47,13 +56,13 @@ def run_client():
                 break  # HOST closed, restart this function to listen for new connection
             if data is not None:
                 data = struct.unpack('>6b', packed_msg_size)
-                print(data)
-                '''Here we can do whatever we want with this array.
-                Here it is printed but it can be used for maestro control.
-                '''
+                if dev is None:  # Print because we have no device
+                    print(data)
+                else:  # Have a device connected to this, send to Maestro
+                    maestro.set_thrusts(data)
 
 
-def main(start=False):
+def main(start=False) -> None:
     """Control code to start and stop the server
     """
     while True:
