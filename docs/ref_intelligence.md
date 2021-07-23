@@ -1,4 +1,8 @@
-
+<h6> To start data stream from client to server, run the runserver.sh in 
+MechatronicsRobosub2021/src/Intelligence/Server_Docker/
+then, run the runclient.sh in 
+MechatronicsRobosub2021/src/Intelligence/Client_Docker/
+<h6>
 
 <h1>Connections<h1>
   
