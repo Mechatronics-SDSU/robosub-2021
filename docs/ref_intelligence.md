@@ -1,8 +1,8 @@
 <h2> To start data stream from client to server <h2> 
 
-1. run the runserver.sh in MechatronicsRobosub2021/src/Intelligence/Server_Docker/
+> run the runserver.sh in MechatronicsRobosub2021/src/Intelligence/Server_Docker/
 
-2. run the runclient.sh in MechatronicsRobosub2021/src/Intelligence/Client_Docker/
+> run the runclient.sh in MechatronicsRobosub2021/src/Intelligence/Client_Docker/
 
 <h4>
   Docker containers are utilized to avoid dependency issues
