@@ -58,6 +58,7 @@ From [here](https://docs.docker.com/engine/install/ubuntu/)
 - [x] `cd tools/scripts`
 - [x] `. build_<relevant_container>.sh` Run whatever build scripts you want but make sure it's done from this directory
 - [x] If building additional containers, `cd tools/scripts` and run additional build scripts.
+##### NOTE FOR PILOT CONTAINER: There's a build_pilot_complete.sh script. Modify the `<Mechatronics directory>/dockerfiles/Pilot_Complete/maestro_device.txt` file to have the name of the maestro device. This can change!
 
 #### Testing containers with GUI
 - [x] `cd <repo_directory>`
