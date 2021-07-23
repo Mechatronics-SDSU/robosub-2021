@@ -901,8 +901,15 @@ class Window(tk.Frame):
                 control_in.put(i, self.js.get_button(i - self.js.get_numaxes()))
             control_in.put((self.js.get_numaxes() + self.js.get_numbuttons()), self.js.get_hat(0))  # Hat
             self.current_control_inputs = control_in
-            self.pilot_pipe_out.send((control_in.tobytes()))
+            # self.pilot_pipe_out.send((control_in.tobytes()))
             self.maestro_controls = self.ct.translate_to_maestro_controller(self.current_control_inputs)
+            self.pilot_pipe_out.send((struct.pack('>6b',
+                                                  self.maestro_controls[0],
+                                                  self.maestro_controls[1],
+                                                  self.maestro_controls[2],
+                                                  self.maestro_controls[3],
+                                                  self.maestro_controls[4],
+                                                  self.maestro_controls[5])))
             # L2/R2 threshold update
             button_frame = cv2.imread('img/l2r2_base.png')
             button_frame_2 = cv2.imread('img/l2r2_base.png')
@@ -1614,6 +1621,9 @@ def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui):
                                 pilot_pipe_out.send(('gui', 'pilot', 'no_conn_socket'))
                                 server_conn = False
                                 break
+                    controller_input = mp.connection.wait([pipe_in_from_gui], timeout=-1)
+                    if len(controller_input) > 0:
+                        controller_input.clear()
                 controller_input = mp.connection.wait([pipe_in_from_gui], timeout=-1)
                 if len(controller_input) > 0:
                     controller_input.clear()

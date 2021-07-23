@@ -11,4 +11,4 @@ WORKDIR .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-CMD [ "python3", "/src/Control/pilot_client.py" ]
+CMD [ "python3", "-u", "/src/Control/pilot_server.py" ]

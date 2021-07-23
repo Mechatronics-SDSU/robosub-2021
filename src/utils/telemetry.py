@@ -70,8 +70,11 @@ class Telemetry:
             loaded_data = np.frombuffer(data, dtype=float)
             counter = 0
             for i in self.sensors:
-                self.sensors[i] = loaded_data[counter]
-                counter += 1
+                try:
+                    self.sensors[i] = loaded_data[counter]
+                    counter += 1
+                except IndexError:
+                    return False
             return True
         else:  # Failed to load numpy array from bytes or data already loaded
             return False
