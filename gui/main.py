@@ -279,7 +279,6 @@ class Window(tk.Frame):
         self.info_window_host_text.create_image((2, 2), anchor=tk.NW, image=self.info_window_host_text_img)
         self.info_window = tk.Frame(master=self.master, width=300, height=640, bg='white')
         # Text
-        self.info_all_text = tk.Label(master=self.info_window, text='ALL STATUSES:', bd=0, bg='white')
         self.info_all_comms_text = tk.Label(master=self.info_window, text='COMMS @' + self.remote_hostname, bd=0, bg='black', fg='white')
         # Config
         self.config_is_set = False
@@ -332,6 +331,7 @@ class Window(tk.Frame):
         self.mission_config_text_current = tk.Label(master=self.info_window, text='None', bd=0, anchor='w', bg='white', justify=tk.LEFT)
 
         # Telemetry Window
+        self.tel_window_old = tk.Frame(master=self.master, bg='white')
         self.telemetry_window = tk.Frame(master=self.master, width=640, height=244, bg='black')
         self.telemetry_canvas_1 = tk.Canvas(master=self.telemetry_window, width=640, height=88, bd=0, bg='green')
         self.telemetry_canvas_1_img = ImageTk.PhotoImage(PILImage.open('img/sensors_img_1.png'))
@@ -346,8 +346,8 @@ class Window(tk.Frame):
         self.sensors_text = tk.Canvas(master=self.master, width=100, height=24, bd=0, bg='green')
         self.sensors_text_img = ImageTk.PhotoImage(PILImage.open('img/sensors_text.png'))
         self.sensors_text.create_image((2, 2), anchor=tk.NW, image=self.sensors_text_img)
-        self.telemetry_window_names = tk.Frame(master=self.telemetry_window)
-        self.telemetry_window_values = tk.Frame(master=self.telemetry_window)
+        self.telemetry_window_names = tk.Frame(master=self.tel_window_old)
+        self.telemetry_window_values = tk.Frame(master=self.tel_window_old)
         """
         self.telemetry_colpad = tk.Label(master=self.telemetry_window_names, text='Telemetry Data:', bd=0, anchor='w', bg='white',
                                          justify=tk.LEFT)
@@ -356,15 +356,15 @@ class Window(tk.Frame):
                                          justify=tk.LEFT)
                                          """
         # Sensors
-        """
+
         self.accelerometer_text = tk.Label(master=self.telemetry_window_names, text='Accelerometer', bd=0, anchor='w', bg='white',
                                            justify=tk.LEFT)
         self.accelerometer_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['accelerometer']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+            self.telemetry_current_state.sensors['accelerometer_x']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.magnetometer_text = tk.Label(master=self.telemetry_window_names, text='Magnetometer', bd=0, anchor='w', bg='white',
                                           justify=tk.LEFT)
         self.magnetometer_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['magnetometer']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+            self.telemetry_current_state.sensors['magnetometer_x']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.pressure_trans_text = tk.Label(master=self.telemetry_window_names, text='Pressure_Transducer', bd=0, anchor='w', bg='white',
                                             justify=tk.LEFT)
         self.pressure_trans_val = tk.Label(master=self.telemetry_window_values, text=str(
@@ -372,7 +372,7 @@ class Window(tk.Frame):
         self.gyroscope_text = tk.Label(master=self.telemetry_window_names, text='Gyroscope', bd=0, anchor='w', bg='white',
                                        justify=tk.LEFT)
         self.gyroscope_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['gyroscope']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+            self.telemetry_current_state.sensors['gyroscope_x']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.voltmeter_text = tk.Label(master=self.telemetry_window_names, text='Voltmeter', bd=0, anchor='w', bg='white',
                                        justify=tk.LEFT)
         self.voltmeter_val = tk.Label(master=self.telemetry_window_values, text=str(
@@ -401,7 +401,7 @@ class Window(tk.Frame):
                                          justify=tk.LEFT)
         self.kill_button_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['kill_button']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        """
+
         # Controller Window
         self.controller_window = tk.Canvas(master=self.master, width=213, height=140, bg='white')
         self.thruster_window = tk.Canvas(master=self.master, width=213, height=130, bg='white')
@@ -598,8 +598,7 @@ class Window(tk.Frame):
         self.info_window.grid(column=4, row=2, sticky=NW)
 
         # Text
-        self.info_all_text.grid(column=0, row=0, sticky=W, columnspan=3)
-        self.info_all_comms_text.grid(column=0, row=2, sticky=W, columnspan=3)
+        self.info_all_comms_text.grid(column=0, row=0, sticky=W, columnspan=3)
 
         # Config
         self.config_status_button.grid(column=0, row=1, sticky=W)
@@ -644,13 +643,14 @@ class Window(tk.Frame):
 
         # Telemetry Window
         self.telemetry_window.grid(column=3, row=4)
+        self.tel_window_old.grid(column=4, row=4)
         self.telemetry_canvas_1.grid(column=0, row=0, sticky=N)
         self.telemetry_canvas_2.grid(column=0, row=1, sticky=N)
-        """
+
         self.telemetry_window_names.grid(column=0, row=0)
         self.telemetry_window_values.grid(column=1, row=0)
-        self.telemetry_colpad.grid(column=0, row=0, sticky=W, columnspan=2)
-        self.telemetry_colpad_2.grid(column=0, row=0, sticky=W)
+        # self.telemetry_colpad.grid(column=0, row=0, sticky=W, columnspan=2)
+        # self.telemetry_colpad_2.grid(column=0, row=0, sticky=W)
         self.accelerometer_text.grid(column=0, row=1, sticky=W, columnspan=2)
         self.accelerometer_val.grid(column=0, row=1, sticky=W)
         self.magnetometer_text.grid(column=0, row=2, sticky=W, columnspan=2)
@@ -673,7 +673,7 @@ class Window(tk.Frame):
         self.auto_button_val.grid(column=0, row=10, sticky=W)
         self.kill_button_text.grid(column=0, row=11, sticky=W, columnspan=2)
         self.kill_button_val.grid(column=0, row=11, sticky=W)
-        """
+
 
         # Controller Window
         self.controller_window.grid(column=0, row=3, sticky=NW, rowspan=2)
@@ -1334,15 +1334,15 @@ class Window(tk.Frame):
         """
         if self.telemetry_socket_is_connected:
             pass
-            """
+
             self.accelerometer_val.configure(self.accelerometer_val,
-                                             text=str(self.telemetry_current_state.sensors['accelerometer']))
+                                             text=str(self.telemetry_current_state.sensors['accelerometer_x']))
             self.magnetometer_val.configure(self.magnetometer_val,
-                                            text=str(self.telemetry_current_state.sensors['magnetometer']))
+                                            text=str(self.telemetry_current_state.sensors['magnetometer_x']))
             self.pressure_trans_val.configure(self.pressure_trans_val,
                                              text=str(self.telemetry_current_state.sensors['pressure_transducer']))
             self.gyroscope_val.configure(self.gyroscope_val,
-                                        text=str(self.telemetry_current_state.sensors['gyroscope']))
+                                        text=str(self.telemetry_current_state.sensors['gyroscope_x']))
             self.voltmeter_val.configure(self.voltmeter_val,
                                         text=str(self.telemetry_current_state.sensors['voltmeter']))
             self.battery_current_val.configure(self.battery_current_val,
@@ -1357,7 +1357,7 @@ class Window(tk.Frame):
                                            text=str(self.telemetry_current_state.sensors['auto_button']))
             self.kill_button_val.configure(self.kill_button_val,
                                            text=str(self.telemetry_current_state.sensors['kill_button']))
-            """
+
 
     def read_pipe(self) -> None:
         """Checks input pipe for info from other processes, processes commands here
@@ -1612,7 +1612,7 @@ def logging_proc(logger, logging_pipe_in, logging_pipe_out) -> None:
                     s.connect((hostname, port))
                     server_conn = True
                     logging_pipe_out.send(('gui', 'logging', 'conn_socket'))
-                except ConnectionRefusedError:
+                except ConnectionRefusedError as e:
                     rcon_try_count += 1
                     logger.log('[@LOG] ERROR: Failed to connect to remote server. '
                                + 'Retrying: ' + str(rcon_try_count) + '/' + str(rcon_try_counter_max))
@@ -1664,7 +1664,7 @@ def telemetry_proc(logger, telemetry_pipe_in, telemetry_pipe_out) -> None:
                     s.connect((hostname, port))
                     server_conn = True
                     telemetry_pipe_out.send(('gui', 'telemetry', 'conn_socket'))
-                except ConnectionRefusedError:
+                except ConnectionRefusedError as e:
                     rcon_try_count += 1
                     logger.log('[@TEL] ERROR: Failed to connect to remote server. '
                                + 'Retrying: ' + str(rcon_try_count) + '/' + str(rcon_try_counter_max))
@@ -1725,7 +1725,7 @@ def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui) -> None:
                 while server_conn:
                     try:
                         data = s.recv(1024)
-                    except (ConnectionAbortedError, ConnectionResetError):
+                    except (ConnectionAbortedError, ConnectionResetError) as e:
                         print(e)
                         pilot_pipe_out.send(('gui', 'pilot', 'no_conn_socket'))
                         server_conn = False
@@ -1737,7 +1737,7 @@ def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui) -> None:
                             last_input = controller_input[len(controller_input)-1].recv()
                             try:
                                 s.sendall(last_input)
-                            except (ConnectionAbortedError, ConnectionResetError):
+                            except (ConnectionAbortedError, ConnectionResetError) as e:
                                 print(e)
                                 pilot_pipe_out.send(('gui', 'pilot', 'no_conn_socket'))
                                 server_conn = False
