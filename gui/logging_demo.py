@@ -42,7 +42,7 @@ import time
 import src.utils.logger as logger
 import src.utils.ip_config as ip_config
 sys.modules['ip_config'] = ip_config
-ipconfig = ip_config.load_config_from_file('config.pickle')
+ipconfig = ip_config.load_config_from_file('src/utils/ip_config.json')
 
 
 def sim_intelligence(pipe_to_router):

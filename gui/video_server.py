@@ -21,6 +21,8 @@ import struct
 
 import socket_route_guide_pb2
 import socket_route_guide_pb2_grpc
+import src.utils.ip_config as ipc
+ip = ipc.load_config_from_file('src/utils/ip_config.json')
 
 
 class SocketConnection:
@@ -29,7 +31,7 @@ class SocketConnection:
     def __init__(self):
         print('Initialized')
         self.host = ''
-        self.port = 50001
+        self.port = ip.video_port
         self.started = False
         self.use_udp = False
         if self.use_udp:

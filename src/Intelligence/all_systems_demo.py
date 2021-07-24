@@ -18,7 +18,7 @@ from src.utils.command_configuration import CommandConfigurationPacket as cmdp
 from src.utils.logger import LoggerServer
 
 import src.utils.ip_config as ipc
-ip = ipc.load_config_from_file('config.pickle')
+ip = ipc.load_config_from_file('ip_config.json')
 
 docker_client = docker.from_env()
 
@@ -147,7 +147,7 @@ def cmd_process(pipe_in_from_main, pipe_out_to_main):
         if started:  # CMD GRPC server
             server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
             cmd_pb2_grpc.add_CommandGRPCServicer_to_server(grpc_server.CommandGRPCServicer(pipe_out=pipe_out_to_main), server)
-            server.add_insecure_port('[::]:' + str(50052))
+            server.add_insecure_port('[::]:' + str(ip.grpc_port))
             server.start()
             pipe_out_to_main.send(('main', 'cmd', 'started'))
             server.wait_for_termination()

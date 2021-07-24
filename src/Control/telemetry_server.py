@@ -8,9 +8,8 @@ import numpy as np
 import socket
 
 from src.utils.telemetry import Telemetry
-
-SERVER_HOSTNAME = ''
-SERVER_PORT = 50003
+import src.utils.ip_config as ipc
+ip = ipc.load_config_from_file('src/utils/ip_config.json')
 
 
 def run_server():
@@ -28,7 +27,7 @@ def run_server():
     # Socket connection
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind((SERVER_HOSTNAME, SERVER_PORT))
+        s.bind(('', ip.telemetry_port))
         s.listen()
         conn, address = s.accept()
         print('Listening...')

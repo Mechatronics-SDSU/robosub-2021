@@ -21,9 +21,8 @@ import struct
 
 
 import src.utils.maestro_driver as maestro_driver
-
-
-port = 50004
+import src.utils.ip_config as ipc
+ip = ipc.load_config_from_file('src/utils/ip_config.json')
 
 
 def run_client() -> None:
@@ -40,7 +39,7 @@ def run_client() -> None:
     # Socket
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind(('', port))
+        s.bind(('', ip.pilot_port))
         s.listen()
         conn, address = s.accept()
         while True:

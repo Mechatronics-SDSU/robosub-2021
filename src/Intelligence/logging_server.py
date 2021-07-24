@@ -11,10 +11,12 @@ import socket
 import logging
 import time
 
-from logger import LoggerServer
+from src.utils.logger import LoggerServer
+import src.utils.ip_config as ipc
+ip = ipc.load_config_from_file('ip_config.json')
 
 SERVER_HOSTNAME = ''
-SERVER_PORT = 50002
+SERVER_PORT = ip.logging_port
 
 
 def logging_server(pipe_in):
