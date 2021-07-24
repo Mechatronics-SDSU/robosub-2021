@@ -77,6 +77,9 @@ from PIL import ImageTk
 from PIL import Image as PILImage  # Image is a tkinter import
 import numpy as np
 import cv2
+import matplotlib
+from matplotlib.backends.backend_tkagg import FigureCanvasTk, NavigationToolbar2Tk
+from matplotlib.figure import Figure
 
 # Internal
 import src.utils.cmd_pb2 as cmd_pb2
@@ -110,7 +113,7 @@ gui_update_ms = 10  # Update time for gui elements in ms
 use_udp = False  # Do not touch UDP unless testing. Broken right now.
 
 
-def request_to_value(r):
+def request_to_value(r) -> str:
     """Converts grpc responses into strings, stripping quotes.
     """
     first = -1
@@ -123,7 +126,7 @@ def request_to_value(r):
     return result
 
 
-def get_int_from_bool(b):
+def get_int_from_bool(b) -> int:
     """Returns int version of a boolean.
     """
     if b:
@@ -132,7 +135,7 @@ def get_int_from_bool(b):
         return 0
 
 
-def log_parse(input_data):
+def log_parse(input_data) -> list:
     """Logs sometimes arrive in >1 at a time.
     Parses them out and returns a list.
     :return: List of all logs.
@@ -154,7 +157,7 @@ def log_parse(input_data):
 class CMDGrpcClient:
     """Handles GRPC clients with related methods.
     """
-    def __init__(self, hostname, port, logger):
+    def __init__(self, hostname, port, logger) -> None:
         self.remote_client = str(hostname)
         self.port = str(port)
         self._channel = grpc.insecure_channel(self.remote_client + ':' + self.port)
@@ -162,7 +165,7 @@ class CMDGrpcClient:
         self.logger = logger
         logger.log('[GRPC] Started up client. ' + self.remote_client + ':' + self.port)
 
-    def send(self, request):
+    def send(self, request) -> str:
         """Sends argument over GRPC
         @:param request to be sent over GRPC, as defined in protobuf
         """
@@ -176,7 +179,7 @@ class CMDGrpcClient:
             response = '!'
         return response
 
-    def close(self):
+    def close(self) -> None:
         """Closes GRPC channel
         """
         self._channel.close()
@@ -185,11 +188,11 @@ class CMDGrpcClient:
 class LoggerWrapper:
     """Provides easy methods for logging with formatting.
     """
-    def __init__(self, showtime=True):
+    def __init__(self, showtime=True) -> None:
         self.queue = mp.Queue()
         self.add_timestamp = showtime
 
-    def log(self, string, strip=True):
+    def log(self, string, strip=True) -> None:
         """Logs the string
         :param string: Adds to logger queue
         :param strip: Whether to strip newlines
@@ -216,7 +219,7 @@ class LoggerWrapper:
 class Window(tk.Frame):
     """Window class, handles the GUI's 'master' or 'root' window and all subwindows
     """
-    def __init__(self, pilot_pipe, master=None):
+    def __init__(self, pilot_pipe, master=None) -> None:
         # Load ports from config file or set to defaults
         self.remote_hostname = default_hostname
         self.port_command_grpc = default_command_port_grpc
@@ -246,24 +249,34 @@ class Window(tk.Frame):
         # Main window
         tk.Frame.__init__(self, master)
         self.master = master
+        master.iconbitmap('img/mech_icon.ico')
         self.closing = False
 
         # Top Bar
         self.top_bar = tk.Frame(master=self.master, width=resolution[0], height=30, bg='white')
 
         # Logging Window
+        self.logging_window_text = tk.Canvas(master=self.master, width=100, height=24, bg='green')
+        self.logging_window_text_img = ImageTk.PhotoImage(PILImage.open('img/logging_text.png'))
+        self.logging_window_text.create_image((2, 2), anchor=tk.NW, image=self.logging_window_text_img)
         self.logging_window = tk.Frame(master=self.master, width=640, height=480, bg='white')
 
         # Video Frame
+        self.video_window_text = tk.Canvas(master=self.master, width=120, height=24, bg='green')
+        self.video_window_text_img = ImageTk.PhotoImage(PILImage.open('img/video_text.png'))
+        self.video_window_text.create_image((2, 2), anchor=tk.NW, image=self.video_window_text_img)
         self.video_window = tk.Canvas(master=self.master, width=640, height=480, bg='green')
         self.video_window_no_img = ImageTk.PhotoImage(PILImage.open('img/not_loaded.png'))
-        self.video_window_img = self.video_window.create_image((1, 1), anchor=tk.NW, image=self.video_window_no_img)
+        self.video_window_img = self.video_window.create_image((2, 2), anchor=tk.NW, image=self.video_window_no_img)
         # Alternate between frames on video stream because of tkinter's gc
         self.img = ImageTk.PhotoImage(PILImage.open('img/not_loaded_2.png'))
         self.img_2 = ImageTk.PhotoImage(PILImage.open('img/not_loaded_2.png'))
         self.frame_counter = 0
 
         # Info Window
+        self.info_window_host_text = tk.Canvas(master=self.master, width=120, height=24, bg='green')
+        self.info_window_host_text_img = ImageTk.PhotoImage(PILImage.open('img/host_status_text.png'))
+        self.info_window_host_text.create_image((2, 2), anchor=tk.NW, image=self.info_window_host_text_img)
         self.info_window = tk.Frame(master=self.master, width=300, height=640, bg='white')
         # Text
         self.info_all_text = tk.Label(master=self.info_window, text='ALL STATUSES:', bd=0, bg='white')
@@ -278,11 +291,6 @@ class Window(tk.Frame):
         self.cmd_status_button = tk.Button(master=self.info_window, text='     ', bg='red')
         self.cmd_status_text = tk.Label(master=self.info_window, text='[CMD_GRPC]')
         self.cmd_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_command_grpc), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        # Video GRPC (to be deprecated)
-        self.video_grpc_is_connected = False
-        self.video_grpc_status_button = tk.Button(master=self.info_window, text='     ', bg='red')
-        self.video_grpc_status_text = tk.Label(master=self.info_window, text='[VID_GRPC]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.video_grpc_status_port = tk.Label(master=self.info_window, text=':' + grpc_remote_client_port_default, bd=0, anchor='w', bg='white', justify=tk.LEFT)
         # Video Socket
         self.video_socket_is_enabled = tk.BooleanVar(value=False)  # Enable
         self.video_socket_enable_button = tk.Button(master=self.info_window, text='     ', bg='black')
@@ -309,6 +317,7 @@ class Window(tk.Frame):
         self.telemetry_socket_status_text = tk.Label(master=self.info_window, text='[TEL_SCK]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.telemetry_socket_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_telemetry_socket), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.telemetry_current_state = sensor_tel.Telemetry()
+        self.telemetry_graph_states = []
         # Pilot Socket
         self.pilot_socket_is_enabled = tk.BooleanVar(value=False)  # Enable
         self.pilot_socket_enable_button = tk.Button(master=self.info_window, text='     ', bg='black')
@@ -323,15 +332,31 @@ class Window(tk.Frame):
         self.mission_config_text_current = tk.Label(master=self.info_window, text='None', bd=0, anchor='w', bg='white', justify=tk.LEFT)
 
         # Telemetry Window
-        self.telemetry_window = tk.Frame(master=self.master, width=640, height=350, bg='white')
+        self.telemetry_window = tk.Frame(master=self.master, width=640, height=244, bg='black')
+        self.telemetry_canvas_1 = tk.Canvas(master=self.telemetry_window, width=640, height=88, bd=0, bg='green')
+        self.telemetry_canvas_1_img = ImageTk.PhotoImage(PILImage.open('img/sensors_img_1.png'))
+        self.telemetry_canvas_1_config = self.telemetry_canvas_1.create_image((2, 2),
+                                                                              anchor=tk.NW,
+                                                                              image=self.telemetry_canvas_1_img)
+        self.telemetry_canvas_2 = tk.Canvas(master=self.telemetry_window, width=640, height=150, bg='green')
+        self.telemetry_canvas_2_img = ImageTk.PhotoImage(PILImage.open('img/sensors_img_2.png'))
+        self.telemetry_canvas_2_config = self.telemetry_canvas_2.create_image((2, 2),
+                                                                              anchor=tk.NW,
+                                                                              image=self.telemetry_canvas_2_img)
+        self.sensors_text = tk.Canvas(master=self.master, width=100, height=24, bd=0, bg='green')
+        self.sensors_text_img = ImageTk.PhotoImage(PILImage.open('img/sensors_text.png'))
+        self.sensors_text.create_image((2, 2), anchor=tk.NW, image=self.sensors_text_img)
         self.telemetry_window_names = tk.Frame(master=self.telemetry_window)
         self.telemetry_window_values = tk.Frame(master=self.telemetry_window)
+        """
         self.telemetry_colpad = tk.Label(master=self.telemetry_window_names, text='Telemetry Data:', bd=0, anchor='w', bg='white',
                                          justify=tk.LEFT)
         self.telemetry_colpad_2 = tk.Label(master=self.telemetry_window_values, text='          ', bd=0, anchor='w',
                                          bg='white',
                                          justify=tk.LEFT)
+                                         """
         # Sensors
+        """
         self.accelerometer_text = tk.Label(master=self.telemetry_window_names, text='Accelerometer', bd=0, anchor='w', bg='white',
                                            justify=tk.LEFT)
         self.accelerometer_val = tk.Label(master=self.telemetry_window_values, text=str(
@@ -376,13 +401,17 @@ class Window(tk.Frame):
                                          justify=tk.LEFT)
         self.kill_button_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['kill_button']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-
+        """
         # Controller Window
-        self.controller_window = tk.Frame(master=self.master, width=300, height=110, bg='white')
-        self.thruster_window = tk.Frame(master=self.master, width=350, height=110, bg='white')
-        self.controller_window_buttons = tk.Frame(master=self.controller_window, width=640, height=350, bg='white')
-        self.controller_window_joysticks_l = tk.Frame(master=self.controller_window)
-        self.controller_window_joysticks_r = tk.Frame(master=self.controller_window)
+        self.controller_window = tk.Canvas(master=self.master, width=213, height=140, bg='white')
+        self.thruster_window = tk.Canvas(master=self.master, width=213, height=130, bg='white')
+        self.controller_text = tk.Canvas(master=self.controller_window, width=213, height=24, bg='green')
+        self.controller_text_img = ImageTk.PhotoImage(PILImage.open('img/inputs_thrusters_text.png'))
+        self.controller_text.create_image((2, 2), anchor=tk.NW, image=self.controller_text_img)
+        self.controller_window_buttons = tk.Canvas(master=self.controller_window, width=55, bg='white')
+        self.controller_window_joysticks_l = tk.Canvas(master=self.controller_window, width=102, bg='white')
+        self.controller_window_joysticks_r = tk.Canvas(master=self.controller_window, width=55, bg='white')
+
         # Controller inputs
         self.current_control_inputs = None
         self.maestro_controls = None
@@ -429,14 +458,82 @@ class Window(tk.Frame):
         self.joystick_window_l_img = self.joystick_l.create_image((2, 2), anchor=tk.NW, image=self.joystick_l_img)
         self.joystick_window_r_img = self.joystick_r.create_image((2, 2), anchor=tk.NW, image=self.joystick_r_img)
         # Controller outputs to maestro
-        self.thruster_canvas = tk.Canvas(master=self.thruster_window, width=173, height=130, bg='green')
-        self.thruster_canvas_lpad = tk.Canvas(master=self.thruster_window, width=12, height=130, bg='green')
+        self.thruster_canvas = tk.Canvas(master=self.controller_window, width=173, height=130, bg='green')
         self.thruster_img_1 = ImageTk.PhotoImage(PILImage.open('img/maestro_no_conn.png'))
         self.thruster_img_2 = ImageTk.PhotoImage(PILImage.open('img/maestro_no_conn.png'))
-        self.thruster_img_lpad = ImageTk.PhotoImage(PILImage.open('img/lpad.png'))
         self.thruster_frame_counter = 0
         self.thruster_window_img = self.thruster_canvas.create_image((2, 2), anchor=tk.NW, image=self.thruster_img_1)
-        self.thruster_canvas_lpad.create_image((2, 2), anchor=tk.NW, image=self.thruster_img_lpad)
+        # Graphing
+        self.graph_text = tk.Canvas(master=self.controller_window, width=100, height=24, bg='green')
+        self.graph_text_img = ImageTk.PhotoImage(PILImage.open('img/graph_text.png'))
+        self.graph_text.create_image((2, 2), anchor=tk.NW, image=self.graph_text_img)
+        self.graph_canvas = tk.Canvas(master=self.controller_window, width=427, height=244, bg='green')
+        self.graph_canvas_img = ImageTk.PhotoImage(PILImage.open('img/sensors_base.png'))
+        self.graph_canvas.create_image((2, 2), anchor=tk.NW, image=self.graph_canvas_img)
+        """ Fix later
+        self.graph_plt_figure = Figure((5, 5), dpi=100)
+        self.graph_plt_subplots = self.graph_plt_figure.add_subplot(111)
+        self.graph_plt_subplots.plot([1, 2, 3, 4], [1, 2, 3, 4])
+        self.graph_plt_canvas = FigureCanvasTk(self.graph_plt_figure, self.controller_window)
+        """
+
+        self.graph_sensor_swap_window = tk.Frame(master=self.controller_window, width=220, height=24, bg='green')
+        self.graph_current_sensor = tk.Canvas(master=self.graph_sensor_swap_window, width=180, height=24, bg='green')
+        self.canvas_img = {
+            'not_loaded': ImageTk.PhotoImage(PILImage.open('img/graph_img/not_loaded.png')),
+            'accelerometer_x': ImageTk.PhotoImage(PILImage.open('img/graph_img/accelerometer_x.png')),
+            'accelerometer_y': ImageTk.PhotoImage(PILImage.open('img/graph_img/accelerometer_y.png')),
+            'accelerometer_z': ImageTk.PhotoImage(PILImage.open('img/graph_img/accelerometer_z.png')),
+            'magnetometer_x': ImageTk.PhotoImage(PILImage.open('img/graph_img/magnetometer_x.png')),
+            'magnetometer_y': ImageTk.PhotoImage(PILImage.open('img/graph_img/magnetometer_y.png')),
+            'magnetometer_z': ImageTk.PhotoImage(PILImage.open('img/graph_img/magnetometer_z.png')),
+            'pressure_transducer': ImageTk.PhotoImage(PILImage.open('img/graph_img/pressure_transducer.png')),
+            'gyroscope_x': ImageTk.PhotoImage(PILImage.open('img/graph_img/gyro_x.png')),
+            'gyroscope_y': ImageTk.PhotoImage(PILImage.open('img/graph_img/gyro_y.png')),
+            'gyroscope_z': ImageTk.PhotoImage(PILImage.open('img/graph_img/gyro_z.png')),
+            'voltmeter': ImageTk.PhotoImage(PILImage.open('img/graph_img/voltmeter.png')),
+            'battery_current': ImageTk.PhotoImage(PILImage.open('img/graph_img/battery_ammeter.png')),
+            'roll': ImageTk.PhotoImage(PILImage.open('img/graph_img/roll.png')),
+            'pitch': ImageTk.PhotoImage(PILImage.open('img/graph_img/pitch.png')),
+            'yaw': ImageTk.PhotoImage(PILImage.open('img/graph_img/yaw.png'))
+        }
+        self.canvas_img_by_index = {
+            0: self.canvas_img['not_loaded'],
+            1: self.canvas_img['accelerometer_x'],
+            2: self.canvas_img['accelerometer_y'],
+            3: self.canvas_img['accelerometer_z'],
+            4: self.canvas_img['magnetometer_x'],
+            5: self.canvas_img['magnetometer_y'],
+            6: self.canvas_img['magnetometer_z'],
+            7: self.canvas_img['pressure_transducer'],
+            8: self.canvas_img['gyroscope_x'],
+            9: self.canvas_img['gyroscope_y'],
+            10: self.canvas_img['gyroscope_z'],
+            11: self.canvas_img['voltmeter'],
+            12: self.canvas_img['battery_current'],
+            13: self.canvas_img['roll'],
+            14: self.canvas_img['pitch'],
+            15: self.canvas_img['yaw']
+        }
+        self.current_graph_img_index = 0
+        self.graph_current_sensor_config = self.graph_current_sensor.create_image((2, 2),
+                                                                                  anchor=tk.NW,
+                                                                                  image=self.canvas_img_by_index[
+                                                                                      self.current_graph_img_index])
+        self.graph_sensor_swap_l_button = tk.Button(master=self.graph_sensor_swap_window,
+                                                    text='<',
+                                                    justify=RIGHT,
+                                                    anchor='e',
+                                                    command=partial(self.sensor_button_graph_switch,
+                                                                    invert=True,
+                                                                    max_val=15))
+        self.graph_sensor_swap_r_button = tk.Button(master=self.graph_sensor_swap_window,
+                                                    text='>',
+                                                    justify=LEFT,
+                                                    anchor='w',
+                                                    command=partial(self.sensor_button_graph_switch,
+                                                                    invert=False,
+                                                                    max_val=15))
         # Data I/O to other processes
         self.in_pipe = None
         self.out_pipe = None
@@ -451,7 +548,7 @@ class Window(tk.Frame):
         self.init_window()
         self.update()
 
-    def init_window(self):
+    def init_window(self) -> None:
         """Builds the master widget and all subwidgets, arranges all elements of GUI
         """
         # Root/master window
@@ -483,15 +580,22 @@ class Window(tk.Frame):
         quit_button = Button(master=self.top_bar, text='Exit', justify=LEFT, anchor='w', command=self.client_exit)
         quit_button.grid(column=9, row=0, sticky=W)
 
+        # Text bars
+        self.logging_window_text.grid(column=0, row=1, sticky=W, columnspan=3)
+        self.video_window_text.grid(column=3, row=1, sticky=NW)
+        self.info_window_host_text.grid(column=4, row=1, sticky=NW)
+        self.sensors_text.grid(column=3, row=3, sticky=NW)
+
         # Logging Window
-        self.logging_window.grid(column=0, row=1)
+        self.logging_window.grid(column=0, row=2, sticky=W, columnspan=3)
         self.text.place(x=0, y=0)
         self.logger.log('[Info]: Logger Initialized.')
 
-        # Video Stream Window (GRPC/Socket)
-        self.video_window.grid(column=1, row=1)
+        # Video Stream Window
+        self.video_window.grid(column=3, row=2)
+
         # Info Window (Communications/Statuses)
-        self.info_window.grid(column=3, row=1, sticky=NW)
+        self.info_window.grid(column=4, row=2, sticky=NW)
 
         # Text
         self.info_all_text.grid(column=0, row=0, sticky=W, columnspan=3)
@@ -500,11 +604,6 @@ class Window(tk.Frame):
         # Config
         self.config_status_button.grid(column=0, row=1, sticky=W)
         self.config_status_text.grid(column=1, row=1, sticky=W)
-
-        # Video GRPC (will be deprecated)
-        self.video_grpc_status_button.grid(column=0, row=3, sticky=W)
-        self.video_grpc_status_text.grid(column=1, row=3, sticky=W)
-        self.video_grpc_status_port.grid(column=2, row=3, sticky=W)
 
         # Command GPRC
         self.cmd_status_button.grid(column=0, row=4, sticky=W)
@@ -544,7 +643,10 @@ class Window(tk.Frame):
         self.mission_config_text_current.grid(column=2, row=9, sticky=W, columnspan=2)
 
         # Telemetry Window
-        self.telemetry_window.grid(column=1, row=2)
+        self.telemetry_window.grid(column=3, row=4)
+        self.telemetry_canvas_1.grid(column=0, row=0, sticky=N)
+        self.telemetry_canvas_2.grid(column=0, row=1, sticky=N)
+        """
         self.telemetry_window_names.grid(column=0, row=0)
         self.telemetry_window_values.grid(column=1, row=0)
         self.telemetry_colpad.grid(column=0, row=0, sticky=W, columnspan=2)
@@ -571,13 +673,14 @@ class Window(tk.Frame):
         self.auto_button_val.grid(column=0, row=10, sticky=W)
         self.kill_button_text.grid(column=0, row=11, sticky=W, columnspan=2)
         self.kill_button_val.grid(column=0, row=11, sticky=W)
+        """
 
         # Controller Window
-        self.controller_window.grid(column=0, row=2, sticky=W)
-        self.thruster_window.grid(column=0, row=3, sticky=W)
-        self.controller_window_joysticks_l.grid(column=0, row=0)
-        self.controller_window_buttons.grid(column=1, row=0)
-        self.controller_window_joysticks_r.grid(column=2, row=0)
+        self.controller_window.grid(column=0, row=3, sticky=NW, rowspan=2)
+        self.controller_text.grid(column=0, row=0, columnspan=3)
+        self.controller_window_joysticks_l.grid(column=0, row=1)
+        self.controller_window_buttons.grid(column=1, row=1)
+        self.controller_window_joysticks_r.grid(column=2, row=1)
 
         self.l2_text.grid(column=0, row=0)
         self.ctrl_l2_button.grid(column=1, row=0)
@@ -598,17 +701,25 @@ class Window(tk.Frame):
         self.joystick_r_text.grid(column=1, row=2)
         self.joystick_r.grid(column=0, row=2)
 
-        self.thruster_canvas_lpad.grid(column=0, row=0)
-        self.thruster_canvas.grid(column=1, row=0)
+        self.thruster_canvas.grid(column=0, row=2, sticky=N, columnspan=3)
+
+        # Graphing window
+        self.graph_text.grid(column=4, row=0, sticky=W)
+        self.graph_sensor_swap_window.grid(column=5, row=0, sticky=NW)
+        self.graph_sensor_swap_l_button.grid(column=0, row=0, sticky=W)
+        self.graph_current_sensor.grid(column=1, row=0, sticky=W)
+        self.graph_sensor_swap_r_button.grid(column=2, row=0, sticky=W)
+        self.graph_canvas.grid(column=4, row=1, rowspan=2, columnspan=2)
+        # self.graph_plt_canvas.get_tk_widget().grid(column=4, row=1, rowspan=2, columnspan=2)
 
     @staticmethod
-    def diag_box(message):
+    def diag_box(message) -> None:
         """Creates a diag box with a string.
         This is kept as a test example.
         """
         messagebox.showinfo(title='Info', message=message)
 
-    def config_box(self):
+    def config_box(self) -> None:
         """Creates a diag box to set the config for the sub.
         Must use this diag box to set the configuration before anything else happens on HOST.
         Only location in the program where current config can/should be modified.
@@ -721,12 +832,12 @@ class Window(tk.Frame):
                                          command=partial(self.val_set, self.mission_config_string, 'None')).grid(column=4, row=0)
 
     @staticmethod
-    def val_set(old, new):
+    def val_set(old, new) -> None:
         """tkinter doesn't like calling old.set() within command= arguments, so it's done here!
         """
         old.set(new)
 
-    def confirm_settings(self, top):
+    def confirm_settings(self, top) -> None:
         """Closes the config settings dialog box; changes variable to signify config is set.
         :param top: Window
         """
@@ -740,7 +851,23 @@ class Window(tk.Frame):
         self.config_is_set = True
         top.destroy()
 
-    def client_exit(self):
+    def sensor_button_graph_switch(self, invert, max_val) -> None:
+        """Switches what is displayed on the graph.
+        """
+        if invert:
+            if self.current_graph_img_index == 0:
+                self.current_graph_img_index = max_val
+            else:
+                self.current_graph_img_index -= 1
+        else:
+            if self.current_graph_img_index == max_val:
+                self.current_graph_img_index = 0
+            else:
+                self.current_graph_img_index += 1
+        self.graph_current_sensor.itemconfig(self.graph_current_sensor_config,
+                                             image=self.canvas_img_by_index[self.current_graph_img_index])
+
+    def client_exit(self) -> None:
         """Closes client.
         TODO Needs to be done more gracefully at process level.
         """
@@ -751,7 +878,7 @@ class Window(tk.Frame):
         self.destroy()
         system.exit()
 
-    def cmd_grpc_button(self):
+    def cmd_grpc_button(self) -> None:
         """Attempts to send a GRPC command packet to the SUB.
         """
         # Start up a GRPC client
@@ -771,7 +898,7 @@ class Window(tk.Frame):
             else:
                 self.diag_box('Error, config not set')
 
-    def init_all_enabled_sockets(self):
+    def init_all_enabled_sockets(self) -> None:
         """Initializes all sockets enabled.
         """
         self.init_video_socket()
@@ -780,31 +907,31 @@ class Window(tk.Frame):
         self.init_pilot_socket()
         self.diag_box('Initialized all enabled sockets.')
 
-    def init_video_socket(self):
+    def init_video_socket(self) -> None:
         """Initializes video socket connection from gui
         """
         if self.video_socket_is_enabled.get():
             self.out_pipe.send(('video', 'gui', 'initialize', self.remote_hostname, self.port_video_socket))
 
-    def init_logging_socket(self):
+    def init_logging_socket(self) -> None:
         """Initializes logging socket connection from gui
         """
         if self.logging_socket_level.get() > 0:
             self.out_pipe.send(('logging', 'gui', 'initialize', self.remote_hostname, self.port_logging_socket))
 
-    def init_telemetry_socket(self):
+    def init_telemetry_socket(self) -> None:
         """Initializes telemetry socket connection from gui
         """
         if self.telemetry_socket_is_enabled.get():
             self.out_pipe.send(('telemetry', 'gui', 'initialize', self.remote_hostname, self.port_telemetry_socket))
 
-    def init_pilot_socket(self):
+    def init_pilot_socket(self) -> None:
         """Initializes pilot socket connection from gui
         """
         if self.pilot_socket_is_enabled.get():
             self.out_pipe.send(('pilot', 'gui', 'initialize', self.remote_hostname, self.port_pilot_socket))
 
-    def set_hostname(self):
+    def set_hostname(self) -> None:
         """Sets the hostname of the remote client.
         """
         prompt = simpledialog.askstring('Input', 'Set the remote hostname here:', parent=self.master)
@@ -817,7 +944,7 @@ class Window(tk.Frame):
             self.info_all_comms_text.configure(self.info_all_comms_text, text='COMMS @' + self.remote_hostname)
             self.logger.log('[Warn]: Attempt to pass invalid ip address, defaulting to localhost.')
 
-    def run_logger(self):
+    def run_logger(self) -> None:
         """Adds the first element in the queue to the logs.
         """
         if self.logger.queue.qsize() > 0:
@@ -830,7 +957,7 @@ class Window(tk.Frame):
             self.text.see('end')
 
     @staticmethod
-    def update_button(button, enabled):
+    def update_button(button, enabled) -> None:
         """Swaps button color if it doesn't match enabled.
         NOTE: Called for red/green buttons.
         """
@@ -840,7 +967,7 @@ class Window(tk.Frame):
             button.configure(button, bg='red')
 
     @staticmethod
-    def update_button_enable(button, enabled):
+    def update_button_enable(button, enabled) -> None:
         """Swaps button color if it doesn't match enabled.
         NOTE: Called for black/yellow buttons.
         """
@@ -850,7 +977,7 @@ class Window(tk.Frame):
             button.configure(button, bg='black')
 
     @staticmethod
-    def update_button_int(button, status):
+    def update_button_int(button, status) -> None:
         """Swaps button color if it doesn't match status.
         NOTE: Called for different levels and black/yellow.
         """
@@ -862,14 +989,14 @@ class Window(tk.Frame):
             button.configure(button, text='     ')
 
     @staticmethod
-    def update_status_string(text, status):
+    def update_status_string(text, status) -> None:
         """Sets text to status.
         NOTE: Called for setting text boxes in Labels.
         """
         if text.config('text')[0] != status:
             text.configure(text, text=status)
 
-    def update_frames(self):
+    def update_frames(self) -> None:
         """Checks pipe for data and updates frame in box
         """
         if self.video_stream_pipe_in is not None:  # Checks for proper initialization first
@@ -886,7 +1013,7 @@ class Window(tk.Frame):
                     self.img = ImageTk.PhotoImage(PILImage.fromarray(image))
                     self.video_window.itemconfig(self.video_window_img, image=self.img)
 
-    def send_controller_state(self):
+    def send_controller_state(self) -> None:
         """Sends current controller state to Pilot process
         Updates frames
         """
@@ -1202,10 +1329,12 @@ class Window(tk.Frame):
                 self.thruster_img_1 = ImageTk.PhotoImage(PILImage.fromarray(thruster_frame))
                 self.thruster_canvas.itemconfig(self.thruster_window_img, image=self.thruster_img_1)
 
-    def update_telemetry(self):
+    def update_telemetry(self) -> None:
         """Updates the telemetry window.
         """
         if self.telemetry_socket_is_connected:
+            pass
+            """
             self.accelerometer_val.configure(self.accelerometer_val,
                                              text=str(self.telemetry_current_state.sensors['accelerometer']))
             self.magnetometer_val.configure(self.magnetometer_val,
@@ -1228,8 +1357,9 @@ class Window(tk.Frame):
                                            text=str(self.telemetry_current_state.sensors['auto_button']))
             self.kill_button_val.configure(self.kill_button_val,
                                            text=str(self.telemetry_current_state.sensors['kill_button']))
+            """
 
-    def read_pipe(self):
+    def read_pipe(self) -> None:
         """Checks input pipe for info from other processes, processes commands here
         """
         gui_cmd = []
@@ -1238,11 +1368,7 @@ class Window(tk.Frame):
             if len(conn) > 0:
                 gui_cmd = conn[0].recv()
                 if gui_cmd[1] == 'video':
-                    if gui_cmd[2] == 'conn_grpc':
-                        self.video_grpc_is_connected = True
-                    elif gui_cmd[2] == 'no_conn_grpc':
-                        self.video_grpc_is_connected = False
-                    elif gui_cmd[2] == 'conn_socket':
+                    if gui_cmd[2] == 'conn_socket':
                         self.video_socket_is_connected = True
                     elif gui_cmd[2] == 'no_conn_socket':
                         self.video_socket_is_connected = False
@@ -1269,7 +1395,7 @@ class Window(tk.Frame):
                     elif gui_cmd[2] == 'no_conn_socket':
                         self.pilot_socket_is_connected = False
 
-    def update(self):
+    def update(self) -> None:
         """Update function to read elements from other processes into the GUI
         Overriden from tkinter's window class
         """
@@ -1281,7 +1407,6 @@ class Window(tk.Frame):
         self.update_telemetry()  # Update telemetry displayed
         # Update all button statuses
         self.update_button(self.cmd_status_button, self.cmd_connected)
-        self.update_button(self.video_grpc_status_button, self.video_grpc_is_connected)
         self.update_button(self.video_socket_connected_button, self.video_socket_is_connected)
         self.update_button(self.logging_socket_connected_button, self.logging_socket_is_connected)
         self.update_button(self.telemetry_socket_connected_button, self.telemetry_socket_is_connected)
@@ -1301,7 +1426,7 @@ class Window(tk.Frame):
         self.after(gui_update_ms, self.update)
 
 
-def gui_proc_main(gui_input, gui_output, gui_logger, video_stream_pipe_in, pilot_pipe_out):
+def gui_proc_main(gui_input, gui_output, gui_logger, video_stream_pipe_in, pilot_pipe_out) -> None:
     """GUI Driver code
     """
     # Build Application
@@ -1317,7 +1442,7 @@ def gui_proc_main(gui_input, gui_output, gui_logger, video_stream_pipe_in, pilot
     root_window.mainloop()
 
 
-def video_proc_udp(logger, video_pipe_in, video_pipe_out, video_stream_out):
+def video_proc_udp(logger, video_pipe_in, video_pipe_out, video_stream_out) -> None:
     """Video socket driver code, run on a UDP connection.
     NOTE: Only work on this function if trying to fix for better performance.
     Should not be called otherwise. Left in place for testing purposes.
@@ -1381,7 +1506,7 @@ def video_proc_udp(logger, video_pipe_in, video_pipe_out, video_stream_out):
             s.close()
 
 
-def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
+def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out) -> None:
     """Video socket driver code, running on a TCP connection.
     """
     hostname = ''
@@ -1461,7 +1586,7 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out):
                     video_stream_out.send(frame)
 
 
-def logging_proc(logger, logging_pipe_in, logging_pipe_out):
+def logging_proc(logger, logging_pipe_in, logging_pipe_out) -> None:
     """Receives logs from Intelligence over TCP connection.
     """
     hostname = ''
@@ -1514,7 +1639,7 @@ def logging_proc(logger, logging_pipe_in, logging_pipe_out):
                         break
 
 
-def telemetry_proc(logger, telemetry_pipe_in, telemetry_pipe_out):
+def telemetry_proc(logger, telemetry_pipe_in, telemetry_pipe_out) -> None:
     """Receives telemetry from Control over TCP connection.
     """
     hostname = ''
@@ -1560,7 +1685,7 @@ def telemetry_proc(logger, telemetry_pipe_in, telemetry_pipe_out):
                         server_conn = False
 
 
-def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui):
+def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui) -> None:
     """Sends controller input to Control over TCP connection.
     """
     hostname = ''
@@ -1641,7 +1766,7 @@ def router(logger,  # Gui logger
            from_logger_pipe_in, to_logger_pipe_out,
            from_telemetry_pipe_in, to_telemetry_pipe_out,
            from_pilot_pipe_in, to_pilot_pipe_out
-           ):
+           ) -> None:
     """Routes messages between pipes, given destination of the message.
     """
     while True:
@@ -1665,7 +1790,7 @@ def router(logger,  # Gui logger
                 to_pilot_pipe_out.send(result)
 
 
-def main():
+def main() -> None:
     """Main driver code, handles all processes.
     """
     if os.name == 'nt':  # Fix for linux
@@ -1687,22 +1812,19 @@ def main():
     gui_proc = context.Process(target=gui_proc_main, args=(gui_pipe_in_from_router, pipe_to_router_from_gui, gui_logger, pipe_in_from_video_stream, pipe_to_pilot_from_gui))
     gui_proc.start()
     gui_logger.log('[Info]: Gui Initialized.')  # Log to Gui from main process
-    gui_logger.log('  ___ ___  ___ _   _ ', strip=False)
-    print('  ___ ___  ___ _   _ ')
-    gui_logger.log(' / __|   \\/ __| | | |', strip=False)
-    print(' / __|   \\/ __| | | |')
-    gui_logger.log(' \\__ \\ |) \\__ \\ |_| |', strip=False)
-    print(' \\__ \\ |) \\__ \\ |_| |')
-    gui_logger.log(' |___/___/|___/\\___/ ', strip=False)
-    print(' |___/___/|___/\\___/ ')
-    gui_logger.log(' _____         _       _               _         ', strip=False)
-    print(' _____         _       _               _         ')
-    gui_logger.log('|     |___ ___| |_ ___| |_ ___ ___ ___|_|___ ___ ', strip=False)
-    print('|     |___ ___| |_ ___| |_ ___ ___ ___|_|___ ___ ')
-    gui_logger.log('| | | | -_|  _|   | .\'|  _|  _| . |   | |  _|_ -', strip=False)
-    print('| | | | -_|  _|   | .\'|  _|  _| . |   | |  _|_ -')
-    gui_logger.log('|_|_|_|___|___|_|_|__,|_| |_| |___|_|_|_|___|___|', strip=False)
-    print('|_|_|_|___|___|_|_|__,|_| |_| |___|_|_|_|___|___|')
+    gui_logger.log('+----------------------------+', strip=False)
+    gui_logger.log('||    ___ ___  ___ _   _    ||', strip=False)
+    gui_logger.log('||   / __|   \\/ __| | | |   ||', strip=False)
+    gui_logger.log('||   \\__ \\ |) \\__ \\ |_| |   ||', strip=False)
+    gui_logger.log('||   |___/___/|___/\\___/    ||', strip=False)
+    gui_logger.log('||                          ||', strip=False)
+    gui_logger.log('+----------------------------+--------------------------+', strip=False)
+    gui_logger.log('||   _____         _       _               _           ||', strip=False)
+    gui_logger.log('||  |     |___ ___| |_ ___| |_ ___ ___ ___|_|___ ___   ||', strip=False)
+    gui_logger.log('||  | | | | -_|  _|   | .\'|  _|  _| . |   | |  _|_ -   ||', strip=False)
+    gui_logger.log('||  |_|_|_|___|___|_|_|__,|_| |_| |___|_|_|_|___|___|  ||', strip=False)
+    gui_logger.log('||                                                     ||', strip=False)
+    gui_logger.log('+----------------------------+--------------------------+', strip=False)
     gui_logger.log(' ', strip=False)
     print(' ')
 

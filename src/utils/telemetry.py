@@ -26,10 +26,16 @@ class Telemetry:
         self._randomize = rand_data
         self.loaded = False  # Check if data is loaded
         self.sensors = {
-            'accelerometer': float,
-            'magnetometer': float,
+            'accelerometer_x': float,
+            'accelerometer_y': float,
+            'accelerometer_z': float,
+            'magnetometer_x': float,
+            'magnetometer_y': float,
+            'magnetometer_z': float,
             'pressure_transducer': float,
-            'gyroscope': float,
+            'gyroscope_x': float,
+            'gyroscope_y': float,
+            'gyroscope_z': float,
             'voltmeter': float,
             'battery_current': float,
             'roll': float,
@@ -83,7 +89,7 @@ class Telemetry:
         """Converts class data into a numpy array.
         :return: Bytes object of numpy data.
         """
-        result = np.zeros(shape=(1, 11))
+        result = np.zeros(shape=(1, 17))
         counter = 0
         for i in self.sensors:
             result.put(counter, self.sensors[i])
