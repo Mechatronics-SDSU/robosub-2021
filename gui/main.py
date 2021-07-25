@@ -77,8 +77,8 @@ from PIL import ImageTk
 from PIL import Image as PILImage  # Image is a tkinter import
 import numpy as np
 import cv2
-import matplotlib
-from matplotlib.backends.backend_tkagg import FigureCanvasTk, NavigationToolbar2Tk
+
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
 # Internal
@@ -470,12 +470,12 @@ class Window(tk.Frame):
         self.graph_canvas = tk.Canvas(master=self.controller_window, width=427, height=244, bg='green')
         self.graph_canvas_img = ImageTk.PhotoImage(PILImage.open('img/sensors_base.png'))
         self.graph_canvas.create_image((2, 2), anchor=tk.NW, image=self.graph_canvas_img)
-        """ Fix later
-        self.graph_plt_figure = Figure((5, 5), dpi=100)
+        # matplotlib
+        self.graph_plt_figure = Figure((5.3375, 3.05), dpi=80, frameon=True)
         self.graph_plt_subplots = self.graph_plt_figure.add_subplot(111)
-        self.graph_plt_subplots.plot([1, 2, 3, 4], [1, 2, 3, 4])
-        self.graph_plt_canvas = FigureCanvasTk(self.graph_plt_figure, self.controller_window)
-        """
+        self.graph_plt_subplots.plot([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], [5, 3.5, 3, 2.5, 1, 2.5, 3, 3.5, 5, 4, 2])
+        self.graph_plt_canvas = FigureCanvasTkAgg(self.graph_plt_figure, master=self.graph_canvas)
+        self.graph_plt_canvas.draw()
 
         self.graph_sensor_swap_window = tk.Frame(master=self.controller_window, width=220, height=24, bg='green')
         self.graph_current_sensor = tk.Canvas(master=self.graph_sensor_swap_window, width=180, height=24, bg='green')
@@ -678,7 +678,6 @@ class Window(tk.Frame):
         self.kill_button_text.grid(column=0, row=11, sticky=W, columnspan=2)
         self.kill_button_val.grid(column=0, row=11, sticky=W)
 
-
         # Controller Window
         self.controller_window.grid(column=0, row=3, sticky=NW, rowspan=2)
         self.controller_text.grid(column=0, row=0, columnspan=3)
@@ -714,7 +713,7 @@ class Window(tk.Frame):
         self.graph_current_sensor.grid(column=1, row=0, sticky=W)
         self.graph_sensor_swap_r_button.grid(column=2, row=0, sticky=W)
         self.graph_canvas.grid(column=4, row=1, rowspan=2, columnspan=2)
-        # self.graph_plt_canvas.get_tk_widget().grid(column=4, row=1, rowspan=2, columnspan=2)
+        self.graph_plt_canvas.get_tk_widget().grid(column=0, row=0)
 
     @staticmethod
     def diag_box(message) -> None:
@@ -1361,7 +1360,6 @@ class Window(tk.Frame):
                                            text=str(self.telemetry_current_state.sensors['auto_button']))
             self.kill_button_val.configure(self.kill_button_val,
                                            text=str(self.telemetry_current_state.sensors['kill_button']))
-
 
     def read_pipe(self) -> None:
         """Checks input pipe for info from other processes, processes commands here
