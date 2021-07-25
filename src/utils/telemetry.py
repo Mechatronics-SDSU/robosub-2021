@@ -38,6 +38,8 @@ class Telemetry:
             'gyroscope_z': float,
             'voltmeter': float,
             'battery_current': float,
+            'battery_1_voltage': float,
+            'battery_2_voltage': float,
             'roll': float,
             'pitch': float,
             'yaw': float,

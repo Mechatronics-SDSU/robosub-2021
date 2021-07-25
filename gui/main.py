@@ -493,6 +493,8 @@ class Window(tk.Frame):
             'gyroscope_z': ImageTk.PhotoImage(PILImage.open('img/graph_img/gyro_z.png')),
             'voltmeter': ImageTk.PhotoImage(PILImage.open('img/graph_img/voltmeter.png')),
             'battery_current': ImageTk.PhotoImage(PILImage.open('img/graph_img/battery_ammeter.png')),
+            'battery_1_voltage': ImageTk.PhotoImage(PILImage.open('img/graph_img/battery_1_voltage.png')),
+            'battery_2_voltage': ImageTk.PhotoImage(PILImage.open('img/graph_img/battery_2_voltage.png')),
             'roll': ImageTk.PhotoImage(PILImage.open('img/graph_img/roll.png')),
             'pitch': ImageTk.PhotoImage(PILImage.open('img/graph_img/pitch.png')),
             'yaw': ImageTk.PhotoImage(PILImage.open('img/graph_img/yaw.png'))
@@ -511,9 +513,11 @@ class Window(tk.Frame):
             10: self.canvas_img['gyroscope_z'],
             11: self.canvas_img['voltmeter'],
             12: self.canvas_img['battery_current'],
-            13: self.canvas_img['roll'],
-            14: self.canvas_img['pitch'],
-            15: self.canvas_img['yaw']
+            13: self.canvas_img['battery_1_voltage'],
+            14: self.canvas_img['battery_2_voltage'],
+            15: self.canvas_img['roll'],
+            16: self.canvas_img['pitch'],
+            17: self.canvas_img['yaw']
         }
         self.current_graph_img_index = 0
         self.graph_current_sensor_config = self.graph_current_sensor.create_image((2, 2),
@@ -526,14 +530,14 @@ class Window(tk.Frame):
                                                     anchor='e',
                                                     command=partial(self.sensor_button_graph_switch,
                                                                     invert=True,
-                                                                    max_val=15))
+                                                                    max_val=17))
         self.graph_sensor_swap_r_button = tk.Button(master=self.graph_sensor_swap_window,
                                                     text='>',
                                                     justify=LEFT,
                                                     anchor='w',
                                                     command=partial(self.sensor_button_graph_switch,
                                                                     invert=False,
-                                                                    max_val=15))
+                                                                    max_val=17))
         # Data I/O to other processes
         self.in_pipe = None
         self.out_pipe = None
