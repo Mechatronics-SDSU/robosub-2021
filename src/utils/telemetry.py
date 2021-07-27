@@ -17,13 +17,15 @@ or b. Call Telemetry with the rand_data argument to be True. This will fill the 
 import random
 
 import numpy as np
+import datetime
 
 
 class Telemetry:
     """Handles telemetry data and prepares it for sending back to HOST.
     """
-    def __init__(self, rand_data=False):
+    def __init__(self, rand_data=False, timestamp=False) -> None:
         self._randomize = rand_data
+        self._timestamp = timestamp
         self.loaded = False  # Check if data is loaded
         self.sensors = {
             'accelerometer_x': float,
@@ -46,15 +48,37 @@ class Telemetry:
             'auto_button': float,
             'kill_button': float
         }
+        self.time_series = {
+            'accelerometer_x': 0,
+            'accelerometer_y': 0,
+            'accelerometer_z': 0,
+            'magnetometer_x': 0,
+            'magnetometer_y': 0,
+            'magnetometer_z': 0,
+            'pressure_transducer': 0,
+            'gyroscope_x': 0,
+            'gyroscope_y': 0,
+            'gyroscope_z': 0,
+            'voltmeter': 0,
+            'battery_current': 0,
+            'battery_1_voltage': 0,
+            'battery_2_voltage': 0,
+            'roll': 0,
+            'pitch': 0,
+            'yaw': 0,
+            'auto_button': 0,
+            'kill_button': 0
+        }
         if not self._randomize:
             for i in self.sensors:
                 self.sensors[i] = 0.0
         else:
             for i in self.sensors:
                 self.sensors[i] = random.random()
+                self.time_series[i] = int(datetime.datetime.utcnow().timestamp())
             self.loaded = True
 
-    def load_data_from_array(self, data):
+    def load_data_from_array(self, data) -> bool:
         """
         :param data: List of data to be loaded into this class
         :return: If it worked
@@ -63,6 +87,8 @@ class Telemetry:
             counter = 0
             for i in self.sensors:
                 self.sensors[i] = data[counter]
+                # Replace following line with only updating time series of new sensor data
+                self.time_series[i] = int(datetime.datetime.utcnow().timestamp())
                 counter += 1
             return True
         else:  # Failed to load list arg or data already loaded
@@ -83,6 +109,11 @@ class Telemetry:
                     counter += 1
                 except IndexError:
                     return False
+                try:
+                    self.time_series[i] = loaded_data[counter]
+                    counter += 1
+                except IndexError:
+                    return False
             return True
         else:  # Failed to load numpy array from bytes or data already loaded
             return False
@@ -91,10 +122,12 @@ class Telemetry:
         """Converts class data into a numpy array.
         :return: Bytes object of numpy data.
         """
-        result = np.zeros(shape=(1, 17))
+        result = np.zeros(shape=(1, 34))
         counter = 0
         for i in self.sensors:
             result.put(counter, self.sensors[i])
+            counter += 1
+            result.put(counter, self.time_series[i])
             counter += 1
         return result.tobytes()
 

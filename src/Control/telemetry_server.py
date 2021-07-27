@@ -6,6 +6,7 @@ The commented out code in run_server describes how loading data would look, give
 
 import numpy as np
 import socket
+import datetime
 
 from src.utils.telemetry import Telemetry
 import src.utils.ip_config as ipc
@@ -34,7 +35,7 @@ def run_server():
         while True:
             result = conn.recvfrom(1024)[0]
             if result == b'1':  # Data request
-                data = Telemetry(rand_data=True)  # Testing only, replace with actual sensors
+                data = Telemetry(rand_data=True, timestamp=True)  # Testing only, replace with actual sensors
                 conn.sendall(data.to_bytes())
 
 

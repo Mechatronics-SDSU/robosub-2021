@@ -317,6 +317,8 @@ class Window(tk.Frame):
         self.telemetry_socket_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_telemetry_socket), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.telemetry_current_state = sensor_tel.Telemetry()
         self.telemetry_graph_states = []
+        self.telemetry_time_series_default = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
+
         # Pilot Socket
         self.pilot_socket_is_enabled = tk.BooleanVar(value=False)  # Enable
         self.pilot_socket_enable_button = tk.Button(master=self.info_window, text='     ', bg='black')
@@ -348,31 +350,65 @@ class Window(tk.Frame):
         self.sensors_text.create_image((2, 2), anchor=tk.NW, image=self.sensors_text_img)
         self.telemetry_window_names = tk.Frame(master=self.tel_window_old)
         self.telemetry_window_values = tk.Frame(master=self.tel_window_old)
-        """
+
         self.telemetry_colpad = tk.Label(master=self.telemetry_window_names, text='Telemetry Data:', bd=0, anchor='w', bg='white',
                                          justify=tk.LEFT)
         self.telemetry_colpad_2 = tk.Label(master=self.telemetry_window_values, text='          ', bd=0, anchor='w',
                                          bg='white',
                                          justify=tk.LEFT)
-                                         """
+
         # Sensors
 
-        self.accelerometer_text = tk.Label(master=self.telemetry_window_names, text='Accelerometer', bd=0, anchor='w', bg='white',
-                                           justify=tk.LEFT)
-        self.accelerometer_val = tk.Label(master=self.telemetry_window_values, text=str(
+        self.accelerometer_x_text = tk.Label(master=self.telemetry_window_names, text='Accelerometer_X', bd=0, anchor='w', bg='white',
+                                             justify=tk.LEFT)
+        self.accelerometer_x_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['accelerometer_x']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.magnetometer_text = tk.Label(master=self.telemetry_window_names, text='Magnetometer', bd=0, anchor='w', bg='white',
-                                          justify=tk.LEFT)
-        self.magnetometer_val = tk.Label(master=self.telemetry_window_values, text=str(
+        self.accelerometer_y_text = tk.Label(master=self.telemetry_window_names, text='Accelerometer_Y', bd=0, anchor='w',
+                                           bg='white',
+                                           justify=tk.LEFT)
+        self.accelerometer_y_val = tk.Label(master=self.telemetry_window_values, text=str(
+            self.telemetry_current_state.sensors['accelerometer_y']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.accelerometer_z_text = tk.Label(master=self.telemetry_window_names, text='Accelerometer_Z', bd=0, anchor='w',
+                                           bg='white',
+                                           justify=tk.LEFT)
+        self.accelerometer_z_val = tk.Label(master=self.telemetry_window_values, text=str(
+            self.telemetry_current_state.sensors['accelerometer_z']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+
+        self.magnetometer_x_text = tk.Label(master=self.telemetry_window_names, text='Magnetometer_X', bd=0, anchor='w', bg='white',
+                                            justify=tk.LEFT)
+        self.magnetometer_x_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['magnetometer_x']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.magnetometer_y_text = tk.Label(master=self.telemetry_window_names, text='Magnetometer_Y', bd=0, anchor='w',
+                                            bg='white',
+                                            justify=tk.LEFT)
+        self.magnetometer_y_val = tk.Label(master=self.telemetry_window_values, text=str(
+            self.telemetry_current_state.sensors['magnetometer_y']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.magnetometer_z_text = tk.Label(master=self.telemetry_window_names, text='Magnetometer_Z', bd=0, anchor='w',
+                                            bg='white',
+                                            justify=tk.LEFT)
+        self.magnetometer_z_val = tk.Label(master=self.telemetry_window_values, text=str(
+            self.telemetry_current_state.sensors['magnetometer_z']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+
         self.pressure_trans_text = tk.Label(master=self.telemetry_window_names, text='Pressure_Transducer', bd=0, anchor='w', bg='white',
                                             justify=tk.LEFT)
         self.pressure_trans_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['pressure_transducer']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.gyroscope_text = tk.Label(master=self.telemetry_window_names, text='Gyroscope', bd=0, anchor='w', bg='white',
-                                       justify=tk.LEFT)
-        self.gyroscope_val = tk.Label(master=self.telemetry_window_values, text=str(
+
+        self.gyroscope_x_text = tk.Label(master=self.telemetry_window_names, text='Gyroscope_X', bd=0, anchor='w', bg='white',
+                                         justify=tk.LEFT)
+        self.gyroscope_x_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['gyroscope_x']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.gyroscope_y_text = tk.Label(master=self.telemetry_window_names, text='Gyroscope_Y', bd=0, anchor='w',
+                                         bg='white',
+                                         justify=tk.LEFT)
+        self.gyroscope_y_val = tk.Label(master=self.telemetry_window_values, text=str(
+            self.telemetry_current_state.sensors['gyroscope_y']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.gyroscope_z_text = tk.Label(master=self.telemetry_window_names, text='Gyroscope_Z', bd=0, anchor='w',
+                                         bg='white',
+                                         justify=tk.LEFT)
+        self.gyroscope_z_val = tk.Label(master=self.telemetry_window_values, text=str(
+            self.telemetry_current_state.sensors['gyroscope_z']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+
         self.voltmeter_text = tk.Label(master=self.telemetry_window_names, text='Voltmeter', bd=0, anchor='w', bg='white',
                                        justify=tk.LEFT)
         self.voltmeter_val = tk.Label(master=self.telemetry_window_values, text=str(
@@ -383,6 +419,17 @@ class Window(tk.Frame):
             self.telemetry_current_state.sensors['battery_current']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.roll_text = tk.Label(master=self.telemetry_window_names, text='Roll', bd=0, anchor='w', bg='white',
                                   justify=tk.LEFT)
+        self.battery_voltage_1_text = tk.Label(master=self.telemetry_window_names, text='Battery_1_Volts', bd=0,
+                                             anchor='w', bg='white',
+                                             justify=tk.LEFT)
+        self.battery_voltage_1_val = tk.Label(master=self.telemetry_window_values, text=str(
+            self.telemetry_current_state.sensors['battery_1_voltage']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.battery_voltage_2_text = tk.Label(master=self.telemetry_window_names, text='Battery_2_Volts', bd=0,
+                                               anchor='w', bg='white',
+                                               justify=tk.LEFT)
+        self.battery_voltage_2_val = tk.Label(master=self.telemetry_window_values, text=str(
+            self.telemetry_current_state.sensors['battery_2_voltage']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+
         self.roll_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['roll']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.pitch_text = tk.Label(master=self.telemetry_window_names, text='Pitch', bd=0, anchor='w', bg='white',
@@ -470,13 +517,6 @@ class Window(tk.Frame):
         self.graph_canvas = tk.Canvas(master=self.controller_window, width=427, height=244, bg='green')
         self.graph_canvas_img = ImageTk.PhotoImage(PILImage.open('img/sensors_base.png'))
         self.graph_canvas.create_image((2, 2), anchor=tk.NW, image=self.graph_canvas_img)
-        # matplotlib
-        self.graph_plt_figure = Figure((5.3375, 3.05), dpi=80, frameon=True)
-        self.graph_plt_subplots = self.graph_plt_figure.add_subplot(111)
-        self.graph_plt_subplots.plot([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], [5, 3.5, 3, 2.5, 1, 2.5, 3, 3.5, 5, 4, 2])
-        self.graph_plt_canvas = FigureCanvasTkAgg(self.graph_plt_figure, master=self.graph_canvas)
-        self.graph_plt_canvas.draw()
-
         self.graph_sensor_swap_window = tk.Frame(master=self.controller_window, width=220, height=24, bg='green')
         self.graph_current_sensor = tk.Canvas(master=self.graph_sensor_swap_window, width=180, height=24, bg='green')
         self.canvas_img = {
@@ -519,7 +559,36 @@ class Window(tk.Frame):
             16: self.canvas_img['pitch'],
             17: self.canvas_img['yaw']
         }
+        r = []
+        counter = 1
+        for i in range(len(self.canvas_img)):
+            self.telemetry_graph_states.append([])
+            for j in range(13):
+                self.telemetry_graph_states[i].append(j*counter)
+            counter += 1
+            r = []
         self.current_graph_img_index = 0
+        # matplotlib for graphing
+        self.graph_plt_figures = []
+        self.graph_plt_subplots = []
+        self.graph_plt_canvases = []
+        self.graph_plt_canvas_widgets = []
+        for i in self.canvas_img_by_index:
+            self.graph_plt_figures.append(Figure((5.3375, 3.05), dpi=80, frameon=True))
+            self.graph_plt_subplots.append(self.graph_plt_figures[i].add_subplot(111))
+            self.graph_plt_subplots[i].plot(self.telemetry_time_series_default, self.telemetry_graph_states[i])
+            self.graph_plt_canvases.append(FigureCanvasTkAgg(self.graph_plt_figures[i], master=self.graph_canvas))
+            self.graph_plt_canvases[i].draw()
+            self.graph_plt_canvas_widgets.append(self.graph_plt_canvases[i].get_tk_widget())
+        # self.graph_plt_figure = Figure((5.3375, 3.05), dpi=80, frameon=True)
+        # self.graph_plt_subplot = self.graph_plt_figure.add_subplot(111)
+        # self.graph_plt_subplot.plot([], [])
+        # self.graph_plt_subplots[0].plot(self.telemetry_time_series_default, [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0])
+        # self.graph_plt_canvas = FigureCanvasTkAgg(self.graph_plt_figures[1], master=self.graph_canvas)
+        # self.graph_plt_canvas.draw()
+        self.graph_plt_canvas_widget = self.graph_plt_canvas_widgets[1]
+        # self.video_window.itemconfig(self.video_window_img, image=self.img_2)
+
         self.graph_current_sensor_config = self.graph_current_sensor.create_image((2, 2),
                                                                                   anchor=tk.NW,
                                                                                   image=self.canvas_img_by_index[
@@ -647,36 +716,54 @@ class Window(tk.Frame):
 
         # Telemetry Window
         self.telemetry_window.grid(column=3, row=4)
-        self.tel_window_old.grid(column=4, row=4)
+        self.tel_window_old.grid(column=4, row=3, rowspan=3)
         self.telemetry_canvas_1.grid(column=0, row=0, sticky=N)
         self.telemetry_canvas_2.grid(column=0, row=1, sticky=N)
 
         self.telemetry_window_names.grid(column=0, row=0)
         self.telemetry_window_values.grid(column=1, row=0)
-        # self.telemetry_colpad.grid(column=0, row=0, sticky=W, columnspan=2)
-        # self.telemetry_colpad_2.grid(column=0, row=0, sticky=W)
-        self.accelerometer_text.grid(column=0, row=1, sticky=W, columnspan=2)
-        self.accelerometer_val.grid(column=0, row=1, sticky=W)
-        self.magnetometer_text.grid(column=0, row=2, sticky=W, columnspan=2)
-        self.magnetometer_val.grid(column=0, row=2, sticky=W)
-        self.pressure_trans_text.grid(column=0, row=3, sticky=W, columnspan=2)
-        self.pressure_trans_val.grid(column=0, row=3, sticky=W)
-        self.gyroscope_text.grid(column=0, row=4, sticky=W, columnspan=2)
-        self.gyroscope_val.grid(column=0, row=4, sticky=W)
-        self.voltmeter_text.grid(column=0, row=5, sticky=W, columnspan=2)
-        self.voltmeter_val.grid(column=0, row=5, sticky=W)
-        self.battery_current_text.grid(column=0, row=6, sticky=W, columnspan=2)
-        self.battery_current_val.grid(column=0, row=6, sticky=W)
-        self.roll_text.grid(column=0, row=7, sticky=W, columnspan=2)
-        self.roll_val.grid(column=0, row=7, sticky=W)
-        self.pitch_text.grid(column=0, row=8, sticky=W, columnspan=2)
-        self.pitch_val.grid(column=0, row=8, sticky=W)
-        self.yaw_text.grid(column=0, row=9, sticky=W, columnspan=2)
-        self.yaw_val.grid(column=0, row=9, sticky=W)
-        self.auto_button_text.grid(column=0, row=10, sticky=W, columnspan=2)
-        self.auto_button_val.grid(column=0, row=10, sticky=W)
-        self.kill_button_text.grid(column=0, row=11, sticky=W, columnspan=2)
-        self.kill_button_val.grid(column=0, row=11, sticky=W)
+
+        self.telemetry_colpad.grid(column=0, row=0)
+        self.telemetry_colpad_2.grid(column=1, row=0)
+
+        self.accelerometer_x_text.grid(column=0, row=1, sticky=W, columnspan=2)
+        self.accelerometer_x_val.grid(column=0, row=1, sticky=W)
+        self.accelerometer_y_text.grid(column=0, row=2, sticky=W, columnspan=2)
+        self.accelerometer_y_val.grid(column=0, row=2, sticky=W)
+        self.accelerometer_z_text.grid(column=0, row=3, sticky=W, columnspan=2)
+        self.accelerometer_z_val.grid(column=0, row=3, sticky=W)
+
+        self.magnetometer_x_text.grid(column=0, row=4, sticky=W, columnspan=2)
+        self.magnetometer_x_val.grid(column=0, row=4, sticky=W)
+        self.magnetometer_y_text.grid(column=0, row=5, sticky=W, columnspan=2)
+        self.magnetometer_y_val.grid(column=0, row=5, sticky=W)
+        self.magnetometer_z_text.grid(column=0, row=6, sticky=W, columnspan=2)
+        self.magnetometer_z_val.grid(column=0, row=6, sticky=W)
+
+        self.pressure_trans_text.grid(column=0, row=7, sticky=W, columnspan=2)
+        self.pressure_trans_val.grid(column=0, row=7, sticky=W)
+
+        self.gyroscope_x_text.grid(column=0, row=8, sticky=W, columnspan=2)
+        self.gyroscope_x_val.grid(column=0, row=8, sticky=W)
+        self.gyroscope_y_text.grid(column=0, row=9, sticky=W, columnspan=2)
+        self.gyroscope_y_val.grid(column=0, row=9, sticky=W)
+        self.gyroscope_z_text.grid(column=0, row=10, sticky=W, columnspan=2)
+        self.gyroscope_z_val.grid(column=0, row=10, sticky=W)
+
+        self.voltmeter_text.grid(column=0, row=11, sticky=W, columnspan=2)
+        self.voltmeter_val.grid(column=0, row=11, sticky=W)
+        self.battery_current_text.grid(column=0, row=12, sticky=W, columnspan=2)
+        self.battery_current_val.grid(column=0, row=12, sticky=W)
+        self.battery_voltage_1_text.grid(column=0, row=13, sticky=W, columnspan=2)
+        self.battery_voltage_1_val.grid(column=0, row=13, sticky=W)
+        self.battery_voltage_2_text.grid(column=0, row=14, sticky=W, columnspan=2)
+        self.battery_voltage_2_val.grid(column=0, row=14, sticky=W)
+        self.roll_text.grid(column=0, row=15, sticky=W, columnspan=2)
+        self.roll_val.grid(column=0, row=15, sticky=W)
+        self.pitch_text.grid(column=0, row=16, sticky=W, columnspan=2)
+        self.pitch_val.grid(column=0, row=16, sticky=W)
+        self.yaw_text.grid(column=0, row=17, sticky=W, columnspan=2)
+        self.yaw_val.grid(column=0, row=17, sticky=W)
 
         # Controller Window
         self.controller_window.grid(column=0, row=3, sticky=NW, rowspan=2)
@@ -713,7 +800,7 @@ class Window(tk.Frame):
         self.graph_current_sensor.grid(column=1, row=0, sticky=W)
         self.graph_sensor_swap_r_button.grid(column=2, row=0, sticky=W)
         self.graph_canvas.grid(column=4, row=1, rowspan=2, columnspan=2)
-        self.graph_plt_canvas.get_tk_widget().grid(column=0, row=0)
+        self.graph_plt_canvas_widget.grid(column=0, row=0)
 
     @staticmethod
     def diag_box(message) -> None:
@@ -869,6 +956,9 @@ class Window(tk.Frame):
                 self.current_graph_img_index += 1
         self.graph_current_sensor.itemconfig(self.graph_current_sensor_config,
                                              image=self.canvas_img_by_index[self.current_graph_img_index])
+        self.graph_plt_canvas_widget.grid_forget()
+        self.graph_plt_canvas_widget = self.graph_plt_canvas_widgets[self.current_graph_img_index]
+        self.graph_plt_canvas_widget.grid(column=0, row=0)
 
     def client_exit(self) -> None:
         """Closes client.
@@ -1338,14 +1428,14 @@ class Window(tk.Frame):
         if self.telemetry_socket_is_connected:
             pass
 
-            self.accelerometer_val.configure(self.accelerometer_val,
-                                             text=str(self.telemetry_current_state.sensors['accelerometer_x']))
-            self.magnetometer_val.configure(self.magnetometer_val,
-                                            text=str(self.telemetry_current_state.sensors['magnetometer_x']))
+            self.accelerometer_x_val.configure(self.accelerometer_x_val,
+                                               text=str(self.telemetry_current_state.sensors['accelerometer_x']))
+            self.magnetometer_x_val.configure(self.magnetometer_x_val,
+                                              text=str(self.telemetry_current_state.sensors['magnetometer_x']))
             self.pressure_trans_val.configure(self.pressure_trans_val,
                                              text=str(self.telemetry_current_state.sensors['pressure_transducer']))
-            self.gyroscope_val.configure(self.gyroscope_val,
-                                        text=str(self.telemetry_current_state.sensors['gyroscope_x']))
+            self.gyroscope_x_val.configure(self.gyroscope_x_val,
+                                           text=str(self.telemetry_current_state.sensors['gyroscope_x']))
             self.voltmeter_val.configure(self.voltmeter_val,
                                         text=str(self.telemetry_current_state.sensors['voltmeter']))
             self.battery_current_val.configure(self.battery_current_val,
