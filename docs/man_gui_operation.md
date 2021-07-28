@@ -18,7 +18,7 @@ Video | Enable | Enables Pico's camera socket | Disable | Disable Pico's camera 
 Logging | Debug | Enables Pico's logging at debug level (most information) | Info | Enables Pico's logging at info level (important information) | Disable | Disables Pico's logging socket
 Telemetry | Enable | Enable Pico's Telemetry socket to send sensor data back | Disable | Disable Pico's telemetry socket, sensor data not sent back | N/A | N/A
 Pilot | Enable | Enable Pico's Pilot socket, allows for manual control | Disable | Disable Pico's pilot socket, enables autonomous control | N/A | N/A
-Mission | All | Does all missions in order when pilot is off | <Mission> | Does specific mission when pilot is off | None | Does no missions
+Mission | All | Does all missions in order when pilot is off | Mission | Does specific mission when pilot is off | None | Does no missions
 
 #### Controller inputs
 
