@@ -4,6 +4,34 @@ This is the operator manual for the GUI. If the GUI and its dependencies are not
 
 #### Layout
 
+##### System Logs
+System logs are logs from both Pico and the GUI. The GUI's messages will be preceded with a `@` sign to reference which GUI subsystem is responsible for generating the message, as described in the below table. (((add later))) Messages from Pico will be preceded with a `#` sign to reference which of Pico's subsystems is responsible for generating the message.
+Pico's logging system uses python's own logger and implements related logging levels. See the misc section for more information. (((add later)))
+The HOST GUI uses its own logging system and will only log warnings, errors, and critical problems to the logger.
+
+##### Video Stream
+The GUI video steam is a live video feed from Pico that only receives frames when a socket connection is established. If a frame is frozen on this window, it is likely because of a connection loss, but hardware failure for Pico's camera system or other systems is possible. The system attempts to re-establish a connection if it is due to a connection loss. Persistent frame freezing could be from other issues.
+
+##### Comms Status
+The HOST computer establishes various connections with Pico over UNIX sockets and GRPC. This is where that information is displayed.
+
+##### HOST Status
+The HOST computer and the GUI will display information here, such as if the config is set, if the controller is ready, and if controls are inverted.
+
+##### Pico Status
+If the HOST is connected to Pico's Commande Configuration GRPC and telemetry is enabled, Pico's state is shown here.
+
+##### Inputs/Thruster levels
+Inputs are the raw controller inputs from the Pilot on the controller plugged in to the HOST machine. They are visually represented in the inputs section.
+
+Thruster levels are the translated controller inputs from the controller and are the actual values being sent to the thrusters via the maestro controller. Valid values are from -100 to 100. Negative bars going down are -100 to 0, positive bars going up are 0 to 100.
+
+##### Graphing
+The GUI graphing utility displays the data shown as a function of time, measured in seconds. The graphs can be switched by pressing the left and right buttons to cycle through whatever graph is needed at a perticular time. If no measurment is received from sensors being disabled, the graph will set the value to 0.
+
+##### Sensor Data
+All sensor data from Pico's telemetry socket is displayed here.
+
 #### Startup
 
 #### Setting IP configuration
