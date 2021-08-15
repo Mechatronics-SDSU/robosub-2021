@@ -48,17 +48,18 @@ ________________________________________________________________________________
 
 # Python
 from __future__ import print_function
+
+import multiprocessing
 import multiprocessing as mp
 from multiprocessing import set_start_method, get_context
 import os
 import sys as system  # sys is some other import
 import math
-
+from collections import deque
 import PIL.Image
 import grpc
 import socket
 from datetime import datetime
-
 import controller_translator
 import time
 import subprocess as sub
@@ -126,7 +127,7 @@ def request_to_value(r) -> str:
     return result
 
 
-def get_int_from_bool(b) -> int:
+def get_int_from_bool(b: bool) -> int:
     """Returns int version of a boolean.
     """
     if b:
@@ -152,6 +153,19 @@ def log_parse(input_data) -> list:
             result.append(input_data[(j + 1):(i - 1)])
             s = ''
     return result
+
+
+def peek(d: deque) -> any:
+    """Deque doesn't come with a peek method, definining similar functionality here.
+    :param d: deque object
+    :return: anything a deque can hold, None if IndexError happens
+    """
+    try:
+        ret_val = d.pop()
+    except IndexError as e:  # Empty deque
+        return None
+    d.append(ret_val)
+    return ret_val
 
 
 class CMDGrpcClient:
@@ -317,7 +331,8 @@ class Window(tk.Frame):
         self.telemetry_socket_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_telemetry_socket), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.telemetry_current_state = sensor_tel.Telemetry()
         self.telemetry_graph_states = []
-        self.telemetry_time_series_default = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
+        # self.telemetry_time_series_default = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
+        self.telemetry_time_series_default = list(range(61))
 
         # Pilot Socket
         self.pilot_socket_is_enabled = tk.BooleanVar(value=False)  # Enable
@@ -559,35 +574,59 @@ class Window(tk.Frame):
             16: self.canvas_img['pitch'],
             17: self.canvas_img['yaw']
         }
-        r = []
+        # Graph queues for x(time) and y(data)
+        self.graph_data_deques = []
+        self.graph_time_deques = []
+        # Input stacks for x(time) and y(data)
+        self.input_data_deques = []
+        self.input_time_deques = []
+        # Append lists with deque objects
+        for i in self.canvas_img_by_index:
+            self.graph_data_deques.append(deque())
+            self.graph_time_deques.append(deque())
+            self.input_data_deques.append(deque())
+            self.input_time_deques.append(deque())
         counter = 1
+        self.start_time = datetime.utcnow().timestamp()
+        for i in self.input_data_deques:
+            i.append(0.0)
+        self.sensor_values_exist = False
+        self.iterated = False
+        # Load in start data
+        self.graph_deque_size = 61
         for i in range(len(self.canvas_img)):
             self.telemetry_graph_states.append([])
-            for j in range(13):
-                self.telemetry_graph_states[i].append(j*counter)
+            for j in range(self.graph_deque_size):
+                self.telemetry_graph_states[i].append(0)
             counter += 1
-            r = []
         self.current_graph_img_index = 0
         # matplotlib for graphing
         self.graph_plt_figures = []
         self.graph_plt_subplots = []
+        self.graph_plt_plot_data = []
         self.graph_plt_canvases = []
         self.graph_plt_canvas_widgets = []
         for i in self.canvas_img_by_index:
             self.graph_plt_figures.append(Figure((5.3375, 3.05), dpi=80, frameon=True))
             self.graph_plt_subplots.append(self.graph_plt_figures[i].add_subplot(111))
-            self.graph_plt_subplots[i].plot(self.telemetry_time_series_default, self.telemetry_graph_states[i])
+            _y, = self.graph_plt_subplots[i].plot(self.telemetry_time_series_default, self.telemetry_graph_states[i])
+            self.graph_plt_plot_data.append(_y)
             self.graph_plt_canvases.append(FigureCanvasTkAgg(self.graph_plt_figures[i], master=self.graph_canvas))
             self.graph_plt_canvases[i].draw()
             self.graph_plt_canvas_widgets.append(self.graph_plt_canvases[i].get_tk_widget())
-        # self.graph_plt_figure = Figure((5.3375, 3.05), dpi=80, frameon=True)
-        # self.graph_plt_subplot = self.graph_plt_figure.add_subplot(111)
-        # self.graph_plt_subplot.plot([], [])
-        # self.graph_plt_subplots[0].plot(self.telemetry_time_series_default, [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0])
-        # self.graph_plt_canvas = FigureCanvasTkAgg(self.graph_plt_figures[1], master=self.graph_canvas)
-        # self.graph_plt_canvas.draw()
-        self.graph_plt_canvas_widget = self.graph_plt_canvas_widgets[1]
-        # self.video_window.itemconfig(self.video_window_img, image=self.img_2)
+
+        self.graph_plt_canvas_widget = self.graph_plt_canvas_widgets[1]  # Set image to canvas widget for no data
+
+        # Data for testing update function
+        '''
+        self.graph_time_deques[1].append(1)
+        self.graph_time_deques[1].append(2)
+        self.graph_data_deques[1].append(1)
+        self.graph_data_deques[1].append(2)
+        self.graph_plt_plot_data[1].set_xdata(list(self.graph_time_deques[1]))
+        self.graph_plt_plot_data[1].set_ydata(list(self.graph_data_deques[1]))
+        self.graph_plt_canvases[1].draw()
+        '''
 
         self.graph_current_sensor_config = self.graph_current_sensor.create_image((2, 2),
                                                                                   anchor=tk.NW,
@@ -1423,11 +1462,81 @@ class Window(tk.Frame):
                 self.thruster_canvas.itemconfig(self.thruster_window_img, image=self.thruster_img_1)
 
     def update_telemetry(self) -> None:
-        """Updates the telemetry window.
+        """Updates the deques if 1 second has passed since the last update.
         """
-        if self.telemetry_socket_is_connected:
-            pass
 
+        if self.telemetry_socket_is_connected:  # Check for conn before updating data
+            '''
+            if not self.iterated:  # Append initial start time to time deques
+                counter = 0
+                for i in self.input_time_deques:
+                    i.append(self.telemetry_current_state.time_series[
+                                 self.telemetry_current_state.index_reference[counter]])
+                self.start_time = peek(self.input_time_deques[0])
+            counter = 0
+            for i in self.input_time_deques:  # Append all new data to input deques
+                # if self.sensor_values_exist:
+                # If we have different timestamps, we got a new entry, so add it
+                top = peek(i)
+                if (top is not None) and (not self.sensor_values_exist):  # No data yet
+                    if top < self.telemetry_current_state.time_series[self.telemetry_current_state.index_reference[counter]]:
+                        i.append(self.telemetry_current_state.time_series[self.telemetry_current_state.index_reference[counter]])
+                        self.input_data_deques[counter].append(
+                            self.telemetry_current_state.sensors[self.telemetry_current_state.index_reference[counter]])
+                elif top is None and self.sensor_values_exist:  # No data, but it's incoming
+                    i.append(
+                        self.telemetry_current_state.time_series[self.telemetry_current_state.index_reference[counter]])
+                    self.input_data_deques[counter].append(
+                        self.telemetry_current_state.sensors[self.telemetry_current_state.index_reference[counter]])
+                elif top is not None and self.sensor_values_exist:  # Have data stored and incoming
+                    if top < self.telemetry_current_state.time_series[self.telemetry_current_state.index_reference[counter]]:
+                        i.append(self.telemetry_current_state.time_series[self.telemetry_current_state.index_reference[counter]])
+                        self.input_data_deques[counter].append(
+                            self.telemetry_current_state.sensors[self.telemetry_current_state.index_reference[counter]])
+                counter += 1
+            counter = 0
+            for i in self.input_time_deques:  # Check time series for >= 1 second elapsed, append data if true
+                if self.telemetry_current_state.time_series[self.telemetry_current_state.index_reference[counter]] != 0.0:
+                    if self.iterated and self.sensor_values_exist:
+                        top = peek(self.graph_time_deques[counter])
+                        top2 = peek(self.input_time_deques[counter])
+                        #print(f'top: {top} top2: {top2}')
+                        if (top is not None) and (top2 is not None):
+                            delta = math.floor(self.telemetry_current_state.time_series[
+                                                   self.telemetry_current_state.index_reference[counter]] - top)
+                            if delta >= 1:
+                                #print('t_delta >= 1')
+                                # Move data from stacks to queues, clear stack, send queue to graph
+                                if len(self.graph_time_deques[counter]) > self.graph_deque_size:
+                                    self.graph_time_deques[counter].popleft()
+                                    self.graph_data_deques[counter].popleft()
+                                _t = round(i.pop() - self.start_time)
+                                _d = self.input_data_deques[counter].pop()
+                                i.clear()
+                                self.input_data_deques[counter].clear()
+                                self.graph_time_deques[counter].append(_t)
+                                self.graph_data_deques[counter].append(_d)
+                                #print(f'{self.graph_time_deques[counter]}')
+                                #print(f'{self.graph_data_deques[counter]}')
+                                self.update_graph(data_x=list(self.graph_time_deques[counter]),
+                                    data_y=list(self.graph_data_deques[counter]),
+                                    graph_index=counter)
+                    else:  # First entry, push to deques
+                        _t = round(i.pop() - self.start_time)
+                        _d = self.input_data_deques[counter].pop()
+                        i.clear()
+                        self.input_data_deques[counter].clear()
+                        self.graph_time_deques[counter].append(_t)
+                        self.graph_data_deques[counter].append(_d)
+                        self.update_graph(data_x=list(self.graph_time_deques[counter]),
+                                          data_y=list(self.graph_data_deques[counter]),
+                                          graph_index=counter)
+                        self.sensor_values_exist = True
+                counter += 1
+            if self.sensor_values_exist and (not self.iterated):
+                self.iterated = True
+            '''
+            # Old update function temporarily left here while deques being worked on. Remove later!
             self.accelerometer_x_val.configure(self.accelerometer_x_val,
                                                text=str(self.telemetry_current_state.sensors['accelerometer_x']))
             self.magnetometer_x_val.configure(self.magnetometer_x_val,
@@ -1450,6 +1559,13 @@ class Window(tk.Frame):
                                            text=str(self.telemetry_current_state.sensors['auto_button']))
             self.kill_button_val.configure(self.kill_button_val,
                                            text=str(self.telemetry_current_state.sensors['kill_button']))
+
+    def update_graph(self, data_x: list, data_y: list, graph_index: int) -> None:
+        """Updates the graphs with whatever is in the deques
+        """
+        self.graph_plt_plot_data[graph_index].set_xdata(data_x)
+        self.graph_plt_plot_data[graph_index].set_ydata(data_y)
+        self.graph_plt_canvases[graph_index].draw()
 
     def read_pipe(self) -> None:
         """Checks input pipe for info from other processes, processes commands here
@@ -1478,9 +1594,9 @@ class Window(tk.Frame):
                         elif gui_cmd[2] == 'no_conn_socket':
                             self.telemetry_socket_is_connected = False
                     elif isinstance(gui_cmd[2], bytes):
-                        tel = sensor_tel.Telemetry()
-                        tel.load_data_from_bytes(gui_cmd[2])
-                        self.telemetry_current_state = tel
+                        _t = self.telemetry_current_state.load_data_from_bytes(gui_cmd[2])
+                        if _t != 0:
+                            self.logger.log('[ERROR] TEL failed to load data, error code ' + str(_t))
                 elif gui_cmd[1] == 'pilot':
                     if gui_cmd[2] == 'conn_socket':
                         self.pilot_socket_is_connected = True
