@@ -110,11 +110,12 @@ edge_size = 1
 resolution = (1600, 900)  # Gui root window size
 remote_resolution = (640, 480)  # Remote camera
 gui_update_ms = 10  # Update time for gui elements in ms
+terminal_green = (74, 246, 38)
 
 use_udp = False  # Do not touch UDP unless testing. Broken right now.
 
 
-def request_to_value(r) -> str:
+def request_to_value(r: any) -> str:
     """Converts grpc responses into strings, stripping quotes.
     """
     first = -1
@@ -136,9 +137,10 @@ def get_int_from_bool(b: bool) -> int:
         return 0
 
 
-def log_parse(input_data) -> list:
+def log_parse(input_data: bytes) -> list:
     """Logs sometimes arrive in >1 at a time.
     Parses them out and returns a list.
+    :param input_data: bytes object of potentially multiple log strings.
     :return: List of all logs.
     """
     input_data = bytes.decode(input_data, encoding='utf-8')
@@ -168,10 +170,41 @@ def peek(d: deque) -> any:
     return ret_val
 
 
+class LoggerWrapper:
+    """Provides easy methods for logging with formatting.
+    """
+    def __init__(self, showtime=True) -> None:
+        self.queue = mp.Queue()
+        self.add_timestamp = showtime
+
+    def log(self, string: str, strip=True) -> None:
+        """Logs the string
+        :param string: Adds to logger queue
+        :param strip: Whether to strip newlines
+        """
+        if self.add_timestamp and (strip is True):
+            self.queue.put(str(datetime.now().strftime('[%H:%M:%S]')) + str(string.strip()) + '\n')
+        elif self.add_timestamp and (strip is True):
+            self.queue.put(str(datetime.now().strftime('[%H:%M:%S]')) + str(string) + '\n')
+        elif (not self.add_timestamp) and (strip is False):
+            self.queue.put(str(string.strip()) + '\n')
+        else:
+            self.queue.put(str(string) + '\n')
+
+    def dequeue(self) -> any:
+        """Removes first element from queue
+        :return:
+        """
+        if self.queue.qsize() > 0:
+            return self.queue.get()
+        else:
+            return None
+
+
 class CMDGrpcClient:
     """Handles GRPC clients with related methods.
     """
-    def __init__(self, hostname, port, logger) -> None:
+    def __init__(self, hostname: str, port: int, logger: LoggerWrapper) -> None:
         self.remote_client = str(hostname)
         self.port = str(port)
         self._channel = grpc.insecure_channel(self.remote_client + ':' + self.port)
@@ -179,7 +212,7 @@ class CMDGrpcClient:
         self.logger = logger
         logger.log('[GRPC] Started up client. ' + self.remote_client + ':' + self.port)
 
-    def send(self, request) -> str:
+    def send(self, request: any) -> str:
         """Sends argument over GRPC
         @:param request to be sent over GRPC, as defined in protobuf
         """
@@ -199,41 +232,10 @@ class CMDGrpcClient:
         self._channel.close()
 
 
-class LoggerWrapper:
-    """Provides easy methods for logging with formatting.
-    """
-    def __init__(self, showtime=True) -> None:
-        self.queue = mp.Queue()
-        self.add_timestamp = showtime
-
-    def log(self, string, strip=True) -> None:
-        """Logs the string
-        :param string: Adds to logger queue
-        :param strip: Whether to strip newlines
-        """
-        if self.add_timestamp and (strip is True):
-            self.queue.put(str(datetime.now().strftime('[%H:%M:%S]')) + str(string.strip()) + '\n')
-        elif self.add_timestamp and (strip is True):
-            self.queue.put(str(datetime.now().strftime('[%H:%M:%S]')) + str(string) + '\n')
-        elif (not self.add_timestamp) and (strip is False):
-            self.queue.put(str(string.strip()) + '\n')
-        else:
-            self.queue.put(str(string) + '\n')
-
-    def dequeue(self):
-        """Removes first element from queue
-        :return:
-        """
-        if self.queue.qsize() > 0:
-            return self.queue.get()
-        else:
-            return None
-
-
 class Window(tk.Frame):
     """Window class, handles the GUI's 'master' or 'root' window and all subwindows
     """
-    def __init__(self, pilot_pipe, master=None) -> None:
+    def __init__(self, pilot_pipe: mp.Pipe, master=None) -> None:
         # Load ports from config file or set to defaults
         self.remote_hostname = default_hostname
         self.port_command_grpc = default_command_port_grpc
@@ -293,158 +295,154 @@ class Window(tk.Frame):
         self.info_window_host_text.create_image((2, 2), anchor=tk.NW, image=self.info_window_host_text_img)
         self.info_window = tk.Frame(master=self.master, width=300, height=640, bg='white')
         # Text
-        self.info_all_comms_text = tk.Label(master=self.info_window, text='COMMS @' + self.remote_hostname, bd=0, bg='black', fg='white')
+        self.info_all_comms_text = tk.Label(master=self.info_window, text='COMMS @' + self.remote_hostname,
+                                            bd=0, bg='black', fg='white')
         # Config
         self.config_is_set = False
         self.cmd_config = None
         self.config_status_button = tk.Button(master=self.info_window, text='     ', bg='red')
-        self.config_status_text = tk.Label(master=self.info_window, text='[Config Set]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.config_status_text = tk.Label(master=self.info_window, text='[Config Set]', bd=0, anchor='w',
+                                           bg='white', justify=tk.LEFT)
         # CMD GRPC
         self.cmd_connected = False  # If command's grpc server is connected
         self.cmd_status_button = tk.Button(master=self.info_window, text='     ', bg='red')
         self.cmd_status_text = tk.Label(master=self.info_window, text='[CMD_GRPC]')
-        self.cmd_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_command_grpc), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.cmd_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_command_grpc), bd=0,
+                                        anchor='w', bg='white', justify=tk.LEFT)
         # Video Socket
         self.video_socket_is_enabled = tk.BooleanVar(value=False)  # Enable
         self.video_socket_enable_button = tk.Button(master=self.info_window, text='     ', bg='black')
-        self.video_socket_enable_text = tk.Label(master=self.info_window, text='[VID_ENABLED]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.video_socket_enable_text = tk.Label(master=self.info_window, text='[VID_ENABLED]', bd=0, anchor='w',
+                                                 bg='white', justify=tk.LEFT)
         self.video_socket_is_connected = False  # Connection
         self.video_socket_connected_button = tk.Button(master=self.info_window, text='     ', bg='red')
-        self.video_socket_status_text = tk.Label(master=self.info_window, text='[VID_SCK]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.video_socket_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_video_socket), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.video_socket_status_text = tk.Label(master=self.info_window, text='[VID_SCK]', bd=0, anchor='w',
+                                                 bg='white', justify=tk.LEFT)
+        self.video_socket_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_video_socket), bd=0,
+                                                 anchor='w', bg='white', justify=tk.LEFT)
         # Logging Socket
         self.logging_socket_level = tk.IntVar(value=0)  # Enable/Level
         self.logging_socket_enable_button = tk.Button(master=self.info_window, text='     ', bg='black')
-        self.logging_socket_enable_text = tk.Label(master=self.info_window, text='[LOG_ENABLED]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.logging_socket_enable_text = tk.Label(master=self.info_window, text='[LOG_ENABLED]', bd=0, anchor='w',
+                                                   bg='white', justify=tk.LEFT)
         self.logging_socket_is_connected = False  # Connection
         self.logging_socket_connected_button = tk.Button(master=self.info_window, text='     ', bg='red')
-        self.logging_socket_status_text = tk.Label(master=self.info_window, text='[LOG_SCK]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.logging_socket_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_logging_socket), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.logging_socket_status_text = tk.Label(master=self.info_window, text='[LOG_SCK]', bd=0, anchor='w',
+                                                   bg='white', justify=tk.LEFT)
+        self.logging_socket_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_logging_socket),
+                                                   bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.remote_logging_queue = []
         # Telemetry Socket
         self.telemetry_socket_is_enabled = tk.BooleanVar(value=False)  # Enable
         self.telemetry_socket_enable_button = tk.Button(master=self.info_window, text='     ', bg='black')
-        self.telemetry_socket_enable_text = tk.Label(master=self.info_window, text='[TEL_ENABLED]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.telemetry_socket_enable_text = tk.Label(master=self.info_window, text='[TEL_ENABLED]', bd=0, anchor='w',
+                                                     bg='white', justify=tk.LEFT)
         self.telemetry_socket_is_connected = False  # Connection
         self.telemetry_socket_connected_button = tk.Button(master=self.info_window, text='     ', bg='red')
-        self.telemetry_socket_status_text = tk.Label(master=self.info_window, text='[TEL_SCK]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.telemetry_socket_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_telemetry_socket), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.telemetry_socket_status_text = tk.Label(master=self.info_window, text='[TEL_SCK]', bd=0, anchor='w',
+                                                     bg='white', justify=tk.LEFT)
+        self.telemetry_socket_status_port = tk.Label(master=self.info_window, text=':' +
+                                                                                   str(self.port_telemetry_socket),
+                                                     bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.telemetry_current_state = sensor_tel.Telemetry()
-        self.telemetry_graph_states = []
-        # self.telemetry_time_series_default = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
-        self.telemetry_time_series_default = list(range(61))
 
         # Pilot Socket
         self.pilot_socket_is_enabled = tk.BooleanVar(value=False)  # Enable
         self.pilot_socket_enable_button = tk.Button(master=self.info_window, text='     ', bg='black')
-        self.pilot_socket_enable_text = tk.Label(master=self.info_window, text='[PLT_ENABLED]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.pilot_socket_enable_text = tk.Label(master=self.info_window, text='[PLT_ENABLED]', bd=0, anchor='w',
+                                                 bg='white', justify=tk.LEFT)
         self.pilot_socket_is_connected = False  # Connection
         self.pilot_socket_connected_button = tk.Button(master=self.info_window, text='     ', bg='red')
-        self.pilot_socket_status_text = tk.Label(master=self.info_window, text='[PLT_SCK]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.pilot_socket_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_pilot_socket), bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.pilot_socket_status_text = tk.Label(master=self.info_window, text='[PLT_SCK]', bd=0, anchor='w',
+                                                 bg='white', justify=tk.LEFT)
+        self.pilot_socket_status_port = tk.Label(master=self.info_window, text=':' + str(self.port_pilot_socket), bd=0,
+                                                 anchor='w', bg='white', justify=tk.LEFT)
         # Mission
         self.mission_config_string = tk.StringVar(value='None')  # Mission to do this run
-        self.mission_config_text = tk.Label(master=self.info_window, text='[MISSION]', bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.mission_config_text_current = tk.Label(master=self.info_window, text='None', bd=0, anchor='w', bg='white', justify=tk.LEFT)
+        self.mission_config_text = tk.Label(master=self.info_window, text='[MISSION]', bd=0, anchor='w', bg='white',
+                                            justify=tk.LEFT)
+        self.mission_config_text_current = tk.Label(master=self.info_window, text='None', bd=0, anchor='w', bg='white',
+                                                    justify=tk.LEFT)
 
         # Telemetry Window
         self.tel_window_old = tk.Frame(master=self.master, bg='white')
-        self.telemetry_window = tk.Frame(master=self.master, width=640, height=244, bg='black')
-        self.telemetry_canvas_1 = tk.Canvas(master=self.telemetry_window, width=640, height=88, bd=0, bg='green')
-        self.telemetry_canvas_1_img = ImageTk.PhotoImage(PILImage.open('img/sensors_img_1.png'))
-        self.telemetry_canvas_1_config = self.telemetry_canvas_1.create_image((2, 2),
+        self.telemetry_window = tk.Frame(master=self.master, width=911, height=244, bg='black')
+        self.telemetry_canvas_0 = tk.Canvas(master=self.telemetry_window, width=1050, height=244, bd=0, bg='green')
+        self.telemetry_canvas_0_img = ImageTk.PhotoImage(PILImage.open('img/sensor_base_new.png'))
+        self.telemetry_canvas_0_config = self.telemetry_canvas_0.create_image((2, 2),
                                                                               anchor=tk.NW,
-                                                                              image=self.telemetry_canvas_1_img)
-        self.telemetry_canvas_2 = tk.Canvas(master=self.telemetry_window, width=640, height=150, bg='green')
-        self.telemetry_canvas_2_img = ImageTk.PhotoImage(PILImage.open('img/sensors_img_2.png'))
-        self.telemetry_canvas_2_config = self.telemetry_canvas_2.create_image((2, 2),
-                                                                              anchor=tk.NW,
-                                                                              image=self.telemetry_canvas_2_img)
+                                                                              image=self.telemetry_canvas_0_img)
         self.sensors_text = tk.Canvas(master=self.master, width=100, height=24, bd=0, bg='green')
         self.sensors_text_img = ImageTk.PhotoImage(PILImage.open('img/sensors_text.png'))
         self.sensors_text.create_image((2, 2), anchor=tk.NW, image=self.sensors_text_img)
         self.telemetry_window_names = tk.Frame(master=self.tel_window_old)
         self.telemetry_window_values = tk.Frame(master=self.tel_window_old)
 
-        self.telemetry_colpad = tk.Label(master=self.telemetry_window_names, text='Telemetry Data:', bd=0, anchor='w', bg='white',
-                                         justify=tk.LEFT)
+        self.telemetry_colpad = tk.Label(master=self.telemetry_window_names, text='Telemetry Data:', bd=0, anchor='w',
+                                         bg='white', justify=tk.LEFT)
         self.telemetry_colpad_2 = tk.Label(master=self.telemetry_window_values, text='          ', bd=0, anchor='w',
-                                         bg='white',
-                                         justify=tk.LEFT)
+                                         bg='white', justify=tk.LEFT)
 
         # Sensors
-
-        self.accelerometer_x_text = tk.Label(master=self.telemetry_window_names, text='Accelerometer_X', bd=0, anchor='w', bg='white',
-                                             justify=tk.LEFT)
+        self.accelerometer_x_text = tk.Label(master=self.telemetry_window_names, text='Accelerometer_X', bd=0,
+                                             anchor='w', bg='white', justify=tk.LEFT)
         self.accelerometer_x_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['accelerometer_x']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.accelerometer_y_text = tk.Label(master=self.telemetry_window_names, text='Accelerometer_Y', bd=0, anchor='w',
-                                           bg='white',
-                                           justify=tk.LEFT)
+        self.accelerometer_y_text = tk.Label(master=self.telemetry_window_names, text='Accelerometer_Y', bd=0,
+                                            anchor='w', bg='white', justify=tk.LEFT)
         self.accelerometer_y_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['accelerometer_y']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.accelerometer_z_text = tk.Label(master=self.telemetry_window_names, text='Accelerometer_Z', bd=0, anchor='w',
-                                           bg='white',
-                                           justify=tk.LEFT)
+        self.accelerometer_z_text = tk.Label(master=self.telemetry_window_names, text='Accelerometer_Z', bd=0,
+                                             anchor='w', bg='white', justify=tk.LEFT)
         self.accelerometer_z_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['accelerometer_z']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-
-        self.magnetometer_x_text = tk.Label(master=self.telemetry_window_names, text='Magnetometer_X', bd=0, anchor='w', bg='white',
-                                            justify=tk.LEFT)
+        self.magnetometer_x_text = tk.Label(master=self.telemetry_window_names, text='Magnetometer_X', bd=0, anchor='w',
+                                            bg='white', justify=tk.LEFT)
         self.magnetometer_x_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['magnetometer_x']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.magnetometer_y_text = tk.Label(master=self.telemetry_window_names, text='Magnetometer_Y', bd=0, anchor='w',
-                                            bg='white',
-                                            justify=tk.LEFT)
+                                            bg='white', justify=tk.LEFT)
         self.magnetometer_y_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['magnetometer_y']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.magnetometer_z_text = tk.Label(master=self.telemetry_window_names, text='Magnetometer_Z', bd=0, anchor='w',
-                                            bg='white',
-                                            justify=tk.LEFT)
+                                            bg='white', justify=tk.LEFT)
         self.magnetometer_z_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['magnetometer_z']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-
-        self.pressure_trans_text = tk.Label(master=self.telemetry_window_names, text='Pressure_Transducer', bd=0, anchor='w', bg='white',
-                                            justify=tk.LEFT)
+        self.pressure_trans_text = tk.Label(master=self.telemetry_window_names, text='Pressure_Transducer', bd=0,
+                                            anchor='w', bg='white', justify=tk.LEFT)
         self.pressure_trans_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['pressure_transducer']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-
-        self.gyroscope_x_text = tk.Label(master=self.telemetry_window_names, text='Gyroscope_X', bd=0, anchor='w', bg='white',
-                                         justify=tk.LEFT)
+            self.telemetry_current_state.sensors['pressure_transducer']), bd=0, anchor='w', bg='white',
+                                           justify=tk.LEFT)
+        self.gyroscope_x_text = tk.Label(master=self.telemetry_window_names, text='Gyroscope_X', bd=0, anchor='w',
+                                         bg='white', justify=tk.LEFT)
         self.gyroscope_x_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['gyroscope_x']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.gyroscope_y_text = tk.Label(master=self.telemetry_window_names, text='Gyroscope_Y', bd=0, anchor='w',
-                                         bg='white',
-                                         justify=tk.LEFT)
+                                         bg='white', justify=tk.LEFT)
         self.gyroscope_y_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['gyroscope_y']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.gyroscope_z_text = tk.Label(master=self.telemetry_window_names, text='Gyroscope_Z', bd=0, anchor='w',
-                                         bg='white',
-                                         justify=tk.LEFT)
+                                         bg='white', justify=tk.LEFT)
         self.gyroscope_z_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['gyroscope_z']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-
-        self.voltmeter_text = tk.Label(master=self.telemetry_window_names, text='Voltmeter', bd=0, anchor='w', bg='white',
-                                       justify=tk.LEFT)
+        self.voltmeter_text = tk.Label(master=self.telemetry_window_names, text='Voltmeter', bd=0, anchor='w',
+                                       bg='white', justify=tk.LEFT)
         self.voltmeter_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['voltmeter']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.battery_current_text = tk.Label(master=self.telemetry_window_names, text='Battery_Current', bd=0, anchor='w', bg='white',
-                                             justify=tk.LEFT)
+        self.battery_current_text = tk.Label(master=self.telemetry_window_names, text='Battery_Current', bd=0,
+                                             anchor='w', bg='white', justify=tk.LEFT)
         self.battery_current_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['battery_current']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.roll_text = tk.Label(master=self.telemetry_window_names, text='Roll', bd=0, anchor='w', bg='white',
                                   justify=tk.LEFT)
         self.battery_voltage_1_text = tk.Label(master=self.telemetry_window_names, text='Battery_1_Volts', bd=0,
-                                             anchor='w', bg='white',
-                                             justify=tk.LEFT)
+                                             anchor='w', bg='white', justify=tk.LEFT)
         self.battery_voltage_1_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['battery_1_voltage']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.battery_voltage_2_text = tk.Label(master=self.telemetry_window_names, text='Battery_2_Volts', bd=0,
-                                               anchor='w', bg='white',
-                                               justify=tk.LEFT)
+                                               anchor='w', bg='white', justify=tk.LEFT)
         self.battery_voltage_2_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['battery_2_voltage']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-
         self.roll_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['roll']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
         self.pitch_text = tk.Label(master=self.telemetry_window_names, text='Pitch', bd=0, anchor='w', bg='white',
@@ -455,19 +453,19 @@ class Window(tk.Frame):
                                  justify=tk.LEFT)
         self.yaw_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['yaw']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.auto_button_text = tk.Label(master=self.telemetry_window_names, text='Button_Auto', bd=0, anchor='w', bg='white',
-                                         justify=tk.LEFT)
+        self.auto_button_text = tk.Label(master=self.telemetry_window_names, text='Button_Auto', bd=0, anchor='w',
+                                         bg='white', justify=tk.LEFT)
         self.auto_button_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['auto_button']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.kill_button_text = tk.Label(master=self.telemetry_window_names, text='Button_Kill', bd=0, anchor='w', bg='white',
-                                         justify=tk.LEFT)
+        self.kill_button_text = tk.Label(master=self.telemetry_window_names, text='Button_Kill', bd=0, anchor='w',
+                                         bg='white', justify=tk.LEFT)
         self.kill_button_val = tk.Label(master=self.telemetry_window_values, text=str(
             self.telemetry_current_state.sensors['kill_button']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
 
         # Controller Window
         self.controller_window = tk.Canvas(master=self.master, width=213, height=140, bg='white')
         self.thruster_window = tk.Canvas(master=self.master, width=213, height=130, bg='white')
-        self.controller_text = tk.Canvas(master=self.controller_window, width=213, height=24, bg='green')
+        self.controller_text = tk.Canvas(master=self.master, width=213, height=24, bg='green')
         self.controller_text_img = ImageTk.PhotoImage(PILImage.open('img/inputs_thrusters_text.png'))
         self.controller_text.create_image((2, 2), anchor=tk.NW, image=self.controller_text_img)
         self.controller_window_buttons = tk.Canvas(master=self.controller_window, width=55, bg='white')
@@ -525,127 +523,7 @@ class Window(tk.Frame):
         self.thruster_img_2 = ImageTk.PhotoImage(PILImage.open('img/maestro_no_conn.png'))
         self.thruster_frame_counter = 0
         self.thruster_window_img = self.thruster_canvas.create_image((2, 2), anchor=tk.NW, image=self.thruster_img_1)
-        # Graphing
-        self.graph_text = tk.Canvas(master=self.controller_window, width=100, height=24, bg='green')
-        self.graph_text_img = ImageTk.PhotoImage(PILImage.open('img/graph_text.png'))
-        self.graph_text.create_image((2, 2), anchor=tk.NW, image=self.graph_text_img)
-        self.graph_canvas = tk.Canvas(master=self.controller_window, width=427, height=244, bg='green')
-        self.graph_canvas_img = ImageTk.PhotoImage(PILImage.open('img/sensors_base.png'))
-        self.graph_canvas.create_image((2, 2), anchor=tk.NW, image=self.graph_canvas_img)
-        self.graph_sensor_swap_window = tk.Frame(master=self.controller_window, width=220, height=24, bg='green')
-        self.graph_current_sensor = tk.Canvas(master=self.graph_sensor_swap_window, width=180, height=24, bg='green')
-        self.canvas_img = {
-            'not_loaded': ImageTk.PhotoImage(PILImage.open('img/graph_img/not_loaded.png')),
-            'accelerometer_x': ImageTk.PhotoImage(PILImage.open('img/graph_img/accelerometer_x.png')),
-            'accelerometer_y': ImageTk.PhotoImage(PILImage.open('img/graph_img/accelerometer_y.png')),
-            'accelerometer_z': ImageTk.PhotoImage(PILImage.open('img/graph_img/accelerometer_z.png')),
-            'magnetometer_x': ImageTk.PhotoImage(PILImage.open('img/graph_img/magnetometer_x.png')),
-            'magnetometer_y': ImageTk.PhotoImage(PILImage.open('img/graph_img/magnetometer_y.png')),
-            'magnetometer_z': ImageTk.PhotoImage(PILImage.open('img/graph_img/magnetometer_z.png')),
-            'pressure_transducer': ImageTk.PhotoImage(PILImage.open('img/graph_img/pressure_transducer.png')),
-            'gyroscope_x': ImageTk.PhotoImage(PILImage.open('img/graph_img/gyro_x.png')),
-            'gyroscope_y': ImageTk.PhotoImage(PILImage.open('img/graph_img/gyro_y.png')),
-            'gyroscope_z': ImageTk.PhotoImage(PILImage.open('img/graph_img/gyro_z.png')),
-            'voltmeter': ImageTk.PhotoImage(PILImage.open('img/graph_img/voltmeter.png')),
-            'battery_current': ImageTk.PhotoImage(PILImage.open('img/graph_img/battery_ammeter.png')),
-            'battery_1_voltage': ImageTk.PhotoImage(PILImage.open('img/graph_img/battery_1_voltage.png')),
-            'battery_2_voltage': ImageTk.PhotoImage(PILImage.open('img/graph_img/battery_2_voltage.png')),
-            'roll': ImageTk.PhotoImage(PILImage.open('img/graph_img/roll.png')),
-            'pitch': ImageTk.PhotoImage(PILImage.open('img/graph_img/pitch.png')),
-            'yaw': ImageTk.PhotoImage(PILImage.open('img/graph_img/yaw.png'))
-        }
-        self.canvas_img_by_index = {
-            0: self.canvas_img['not_loaded'],
-            1: self.canvas_img['accelerometer_x'],
-            2: self.canvas_img['accelerometer_y'],
-            3: self.canvas_img['accelerometer_z'],
-            4: self.canvas_img['magnetometer_x'],
-            5: self.canvas_img['magnetometer_y'],
-            6: self.canvas_img['magnetometer_z'],
-            7: self.canvas_img['pressure_transducer'],
-            8: self.canvas_img['gyroscope_x'],
-            9: self.canvas_img['gyroscope_y'],
-            10: self.canvas_img['gyroscope_z'],
-            11: self.canvas_img['voltmeter'],
-            12: self.canvas_img['battery_current'],
-            13: self.canvas_img['battery_1_voltage'],
-            14: self.canvas_img['battery_2_voltage'],
-            15: self.canvas_img['roll'],
-            16: self.canvas_img['pitch'],
-            17: self.canvas_img['yaw']
-        }
-        # Graph queues for x(time) and y(data)
-        self.graph_data_deques = []
-        self.graph_time_deques = []
-        # Input stacks for x(time) and y(data)
-        self.input_data_deques = []
-        self.input_time_deques = []
-        # Append lists with deque objects
-        for i in self.canvas_img_by_index:
-            self.graph_data_deques.append(deque())
-            self.graph_time_deques.append(deque())
-            self.input_data_deques.append(deque())
-            self.input_time_deques.append(deque())
-        counter = 1
-        self.start_time = datetime.utcnow().timestamp()
-        for i in self.input_data_deques:
-            i.append(0.0)
-        self.sensor_values_exist = False
-        self.iterated = False
-        # Load in start data
-        self.graph_deque_size = 61
-        for i in range(len(self.canvas_img)):
-            self.telemetry_graph_states.append([])
-            for j in range(self.graph_deque_size):
-                self.telemetry_graph_states[i].append(0)
-            counter += 1
-        self.current_graph_img_index = 0
-        # matplotlib for graphing
-        self.graph_plt_figures = []
-        self.graph_plt_subplots = []
-        self.graph_plt_plot_data = []
-        self.graph_plt_canvases = []
-        self.graph_plt_canvas_widgets = []
-        for i in self.canvas_img_by_index:
-            self.graph_plt_figures.append(Figure((5.3375, 3.05), dpi=80, frameon=True))
-            self.graph_plt_subplots.append(self.graph_plt_figures[i].add_subplot(111))
-            _y, = self.graph_plt_subplots[i].plot(self.telemetry_time_series_default, self.telemetry_graph_states[i])
-            self.graph_plt_plot_data.append(_y)
-            self.graph_plt_canvases.append(FigureCanvasTkAgg(self.graph_plt_figures[i], master=self.graph_canvas))
-            self.graph_plt_canvases[i].draw()
-            self.graph_plt_canvas_widgets.append(self.graph_plt_canvases[i].get_tk_widget())
 
-        self.graph_plt_canvas_widget = self.graph_plt_canvas_widgets[1]  # Set image to canvas widget for no data
-
-        # Data for testing update function
-        '''
-        self.graph_time_deques[1].append(1)
-        self.graph_time_deques[1].append(2)
-        self.graph_data_deques[1].append(1)
-        self.graph_data_deques[1].append(2)
-        self.graph_plt_plot_data[1].set_xdata(list(self.graph_time_deques[1]))
-        self.graph_plt_plot_data[1].set_ydata(list(self.graph_data_deques[1]))
-        self.graph_plt_canvases[1].draw()
-        '''
-
-        self.graph_current_sensor_config = self.graph_current_sensor.create_image((2, 2),
-                                                                                  anchor=tk.NW,
-                                                                                  image=self.canvas_img_by_index[
-                                                                                      self.current_graph_img_index])
-        self.graph_sensor_swap_l_button = tk.Button(master=self.graph_sensor_swap_window,
-                                                    text='<',
-                                                    justify=RIGHT,
-                                                    anchor='e',
-                                                    command=partial(self.sensor_button_graph_switch,
-                                                                    invert=True,
-                                                                    max_val=17))
-        self.graph_sensor_swap_r_button = tk.Button(master=self.graph_sensor_swap_window,
-                                                    text='>',
-                                                    justify=LEFT,
-                                                    anchor='w',
-                                                    command=partial(self.sensor_button_graph_switch,
-                                                                    invert=False,
-                                                                    max_val=17))
         # Data I/O to other processes
         self.in_pipe = None
         self.out_pipe = None
@@ -661,32 +539,36 @@ class Window(tk.Frame):
         self.update()
 
     def init_window(self) -> None:
-        """Builds the master widget and all subwidgets, arranges all elements of GUI
+        """Builds the master widget and all subwidgets, arranges all elements of GUI with grid
         """
         # Root/master window
         self.master.title('SDSU Mechatronics Robosub External Interface')
 
         # Top Menu Bar
-        self.top_bar.grid(column=0, row=0, padx=0, sticky='W')
+        self.top_bar.grid(column=0, row=0, padx=0, sticky='W', columnspan=3)
         self.top_bar.wait_visibility()
         # Build buttons for top menu bar
         # Config
         config_text = Label(master=self.top_bar, text='Config: ', justify=LEFT, anchor='w')
         config_text.grid(column=0, row=0, sticky=W)
         # Set Hostname
-        hostname_config_button = Button(master=self.top_bar, text='Remote IP', justify=LEFT, anchor='w', command=self.set_hostname)
+        hostname_config_button = Button(master=self.top_bar, text='Remote IP', justify=LEFT, anchor='w',
+                                        command=self.set_hostname)
         hostname_config_button.grid(column=1, row=0, sticky=W)
         # Set
-        config_button = Button(master=self.top_bar, text='Enable Sockets', justify=LEFT, anchor='w', command=partial(self.config_box))
+        config_button = Button(master=self.top_bar, text='Enable Sockets', justify=LEFT, anchor='w',
+                               command=partial(self.config_box))
         config_button.grid(column=2, row=0, sticky=W)
         # Send Command Config
-        send_config_button = Button(master=self.top_bar, text='Send', justify=LEFT, anchor='w', command=self.cmd_grpc_button)
+        send_config_button = Button(master=self.top_bar, text='Send', justify=LEFT, anchor='w',
+                                    command=self.cmd_grpc_button)
         send_config_button.grid(column=3, row=0, sticky=W)
         # Sockets
         config_text = Label(master=self.top_bar, text='Sockets: ', justify=LEFT, anchor='w')
         config_text.grid(column=4, row=0, sticky=W)
         # All
-        start_all_sockets_button = Button(master=self.top_bar, text='Start', justify=LEFT, anchor='w', command=self.init_all_enabled_sockets)
+        start_all_sockets_button = Button(master=self.top_bar, text='Start', justify=LEFT, anchor='w',
+                                          command=self.init_all_enabled_sockets)
         start_all_sockets_button.grid(column=5, row=0, sticky=W)
         # Quit Button
         quit_button = Button(master=self.top_bar, text='Exit', justify=LEFT, anchor='w', command=self.client_exit)
@@ -696,7 +578,7 @@ class Window(tk.Frame):
         self.logging_window_text.grid(column=0, row=1, sticky=W, columnspan=3)
         self.video_window_text.grid(column=3, row=1, sticky=NW)
         self.info_window_host_text.grid(column=4, row=1, sticky=NW)
-        self.sensors_text.grid(column=3, row=3, sticky=NW)
+        self.sensors_text.grid(column=1, row=3, sticky=NW)
 
         # Logging Window
         self.logging_window.grid(column=0, row=2, sticky=W, columnspan=3)
@@ -708,87 +590,71 @@ class Window(tk.Frame):
 
         # Info Window (Communications/Statuses)
         self.info_window.grid(column=4, row=2, sticky=NW)
-
         # Text
         self.info_all_comms_text.grid(column=0, row=0, sticky=W, columnspan=3)
-
         # Config
         self.config_status_button.grid(column=0, row=1, sticky=W)
         self.config_status_text.grid(column=1, row=1, sticky=W)
-
         # Command GPRC
         self.cmd_status_button.grid(column=0, row=4, sticky=W)
         self.cmd_status_text.grid(column=1, row=4, sticky=W)
         self.cmd_status_port.grid(column=2, row=4, sticky=W)
-
         # Video Socket
         self.video_socket_enable_button.grid(column=0, row=5, sticky=W)
         self.video_socket_enable_text.grid(column=1, row=5, sticky=W, columnspan=2)
         self.video_socket_connected_button.grid(column=3, row=5, sticky=W)
         self.video_socket_status_text.grid(column=4, row=5, sticky=W)
         self.video_socket_status_port.grid(column=5, row=5, sticky=W)
-
         # Logging Socket
         self.logging_socket_enable_button.grid(column=0, row=6, sticky=W)
         self.logging_socket_enable_text.grid(column=1, row=6, sticky=W, columnspan=2)
         self.logging_socket_connected_button.grid(column=3, row=6, sticky=W)
         self.logging_socket_status_text.grid(column=4, row=6, sticky=W)
         self.logging_socket_status_port.grid(column=5, row=6, sticky=W)
-
         # Telemetry Socket
         self.telemetry_socket_enable_button.grid(column=0, row=7, sticky=W)
         self.telemetry_socket_enable_text.grid(column=1, row=7, sticky=W, columnspan=2)
         self.telemetry_socket_connected_button.grid(column=3, row=7, sticky=W)
         self.telemetry_socket_status_text.grid(column=4, row=7, sticky=W)
         self.telemetry_socket_status_port.grid(column=5, row=7, sticky=W)
-
         # Pilot Socket
         self.pilot_socket_enable_button.grid(column=0, row=8, sticky=W)
         self.pilot_socket_enable_text.grid(column=1, row=8, sticky=W, columnspan=2)
         self.pilot_socket_connected_button.grid(column=3, row=8, sticky=W)
         self.pilot_socket_status_text.grid(column=4, row=8, sticky=W)
         self.pilot_socket_status_port.grid(column=5, row=8, sticky=W)
-
         # Mission
         self.mission_config_text.grid(column=0, row=9, sticky=W, columnspan=2)
         self.mission_config_text_current.grid(column=2, row=9, sticky=W, columnspan=2)
 
         # Telemetry Window
-        self.telemetry_window.grid(column=3, row=4)
+        self.telemetry_window.grid(column=1, row=4, sticky=NW, columnspan=3, rowspan=3)
+        self.telemetry_canvas_0.grid(column=0, row=0)
         self.tel_window_old.grid(column=4, row=3, rowspan=3)
-        self.telemetry_canvas_1.grid(column=0, row=0, sticky=N)
-        self.telemetry_canvas_2.grid(column=0, row=1, sticky=N)
-
         self.telemetry_window_names.grid(column=0, row=0)
         self.telemetry_window_values.grid(column=1, row=0)
-
         self.telemetry_colpad.grid(column=0, row=0)
         self.telemetry_colpad_2.grid(column=1, row=0)
-
         self.accelerometer_x_text.grid(column=0, row=1, sticky=W, columnspan=2)
         self.accelerometer_x_val.grid(column=0, row=1, sticky=W)
         self.accelerometer_y_text.grid(column=0, row=2, sticky=W, columnspan=2)
         self.accelerometer_y_val.grid(column=0, row=2, sticky=W)
         self.accelerometer_z_text.grid(column=0, row=3, sticky=W, columnspan=2)
         self.accelerometer_z_val.grid(column=0, row=3, sticky=W)
-
         self.magnetometer_x_text.grid(column=0, row=4, sticky=W, columnspan=2)
         self.magnetometer_x_val.grid(column=0, row=4, sticky=W)
         self.magnetometer_y_text.grid(column=0, row=5, sticky=W, columnspan=2)
         self.magnetometer_y_val.grid(column=0, row=5, sticky=W)
         self.magnetometer_z_text.grid(column=0, row=6, sticky=W, columnspan=2)
         self.magnetometer_z_val.grid(column=0, row=6, sticky=W)
-
         self.pressure_trans_text.grid(column=0, row=7, sticky=W, columnspan=2)
         self.pressure_trans_val.grid(column=0, row=7, sticky=W)
-
         self.gyroscope_x_text.grid(column=0, row=8, sticky=W, columnspan=2)
         self.gyroscope_x_val.grid(column=0, row=8, sticky=W)
         self.gyroscope_y_text.grid(column=0, row=9, sticky=W, columnspan=2)
         self.gyroscope_y_val.grid(column=0, row=9, sticky=W)
         self.gyroscope_z_text.grid(column=0, row=10, sticky=W, columnspan=2)
         self.gyroscope_z_val.grid(column=0, row=10, sticky=W)
-
         self.voltmeter_text.grid(column=0, row=11, sticky=W, columnspan=2)
         self.voltmeter_val.grid(column=0, row=11, sticky=W)
         self.battery_current_text.grid(column=0, row=12, sticky=W, columnspan=2)
@@ -805,46 +671,32 @@ class Window(tk.Frame):
         self.yaw_val.grid(column=0, row=17, sticky=W)
 
         # Controller Window
-        self.controller_window.grid(column=0, row=3, sticky=NW, rowspan=2)
-        self.controller_text.grid(column=0, row=0, columnspan=3)
+        self.controller_window.grid(column=0, row=4, sticky=NW)
+        self.controller_text.grid(column=0, row=3, sticky=NW)
         self.controller_window_joysticks_l.grid(column=0, row=1)
         self.controller_window_buttons.grid(column=1, row=1)
         self.controller_window_joysticks_r.grid(column=2, row=1)
-
         self.l2_text.grid(column=0, row=0)
         self.ctrl_l2_button.grid(column=1, row=0)
         self.ctrl_l1_button.grid(column=1, row=1)
         self.joystick_l_text.grid(column=0, row=2)
         self.joystick_l.grid(column=1, row=2)
-
         self.ctrl_l_button.grid(column=0, row=0)
         self.ctrl_n_button.grid(column=1, row=0)
         self.ctrl_r_button.grid(column=2, row=0)
         self.ctrl_w_button.grid(column=0, row=1)
         self.ctrl_e_button.grid(column=2, row=1)
         self.ctrl_s_button.grid(column=1, row=2)
-
         self.r2_text.grid(column=1, row=0)
         self.ctrl_r2_button.grid(column=0, row=0)
         self.ctrl_r1_button.grid(column=0, row=1)
         self.joystick_r_text.grid(column=1, row=2)
         self.joystick_r.grid(column=0, row=2)
-
         self.thruster_canvas.grid(column=0, row=2, sticky=N, columnspan=3)
 
-        # Graphing window
-        self.graph_text.grid(column=4, row=0, sticky=W)
-        self.graph_sensor_swap_window.grid(column=5, row=0, sticky=NW)
-        self.graph_sensor_swap_l_button.grid(column=0, row=0, sticky=W)
-        self.graph_current_sensor.grid(column=1, row=0, sticky=W)
-        self.graph_sensor_swap_r_button.grid(column=2, row=0, sticky=W)
-        self.graph_canvas.grid(column=4, row=1, rowspan=2, columnspan=2)
-        self.graph_plt_canvas_widget.grid(column=0, row=0)
-
     @staticmethod
-    def diag_box(message) -> None:
-        """Creates a diag box with a string.
-        This is kept as a test example.
+    def diag_box(message: str) -> None:
+        """Creates a pop-up dialog box with a string.
         """
         messagebox.showinfo(title='Info', message=message)
 
@@ -893,80 +745,94 @@ class Window(tk.Frame):
                                          text='Enable',
                                          variable=self.video_socket_is_enabled,
                                          value=1,
-                                         command=partial(self.val_set, self.video_socket_is_enabled, True)).grid(column=0, row=0)
+                                         command=partial(self.val_set, self.video_socket_is_enabled,
+                                                         True)).grid(column=0, row=0)
         video_radio_disable = Radiobutton(video_diag,
                                           text='Disable',
                                           variable=self.video_socket_is_enabled,
                                           value=0,
-                                          command=partial(self.val_set, self.video_socket_is_enabled, False)).grid(column=1, row=0)
+                                          command=partial(self.val_set, self.video_socket_is_enabled,
+                                                          False)).grid(column=1, row=0)
         logging_radio_enable_debug = Radiobutton(logging_diag,
                                                  text='Debug',
                                                  variable=self.logging_socket_level,
                                                  value=2,
-                                                 command=partial(self.val_set, self.logging_socket_level, 2)).grid(column=0, row=0)
+                                                 command=partial(self.val_set, self.logging_socket_level,
+                                                                 2)).grid(column=0, row=0)
         logging_radio_enable_info = Radiobutton(logging_diag,
                                                 text='Info',
                                                 variable=self.logging_socket_level,
                                                 value=1,
-                                                command=partial(self.val_set, self.logging_socket_level, 1)).grid(column=1, row=0)
+                                                command=partial(self.val_set, self.logging_socket_level,
+                                                                1)).grid(column=1, row=0)
         logging_radio_enable_disable = Radiobutton(logging_diag,
                                                    text='Disable',
                                                    variable=self.logging_socket_level,
                                                    value=0,
-                                                   command=partial(self.val_set, self.logging_socket_level, 0)).grid(column=2, row=0)
+                                                   command=partial(self.val_set, self.logging_socket_level,
+                                                                   0)).grid(column=2, row=0)
         telemetry_radio_enable = Radiobutton(telemetry_diag,
                                              text='Enable',
                                              variable=self.telemetry_socket_is_enabled,
                                              value=1,
-                                             command=partial(self.val_set, self.telemetry_socket_is_enabled, True)).grid(column=0, row=0)
+                                             command=partial(self.val_set, self.telemetry_socket_is_enabled,
+                                                             True)).grid(column=0, row=0)
         telemetry_radio_disable = Radiobutton(telemetry_diag,
                                               text='Disable',
                                               variable=self.telemetry_socket_is_enabled,
                                               value=0,
-                                              command=partial(self.val_set, self.telemetry_socket_is_enabled, False)).grid(column=1, row=0)
+                                              command=partial(self.val_set, self.telemetry_socket_is_enabled,
+                                                              False)).grid(column=1, row=0)
         pilot_radio_enable = Radiobutton(pilot_diag,
                                          text='Enable',
                                          variable=self.pilot_socket_is_enabled,
                                          value=1,
-                                         command=partial(self.val_set, self.pilot_socket_is_enabled, True)).grid(column=0, row=0)
+                                         command=partial(self.val_set, self.pilot_socket_is_enabled,
+                                                         True)).grid(column=0, row=0)
         pilot_radio_disable = Radiobutton(pilot_diag,
                                           text='Disable',
                                           variable=self.pilot_socket_is_enabled,
                                           value=0,
-                                          command=partial(self.val_set, self.pilot_socket_is_enabled, False)).grid(column=1, row=0)
+                                          command=partial(self.val_set, self.pilot_socket_is_enabled,
+                                                          False)).grid(column=1, row=0)
         mission_radio_all = Radiobutton(mission_diag,
                                         text='All',
                                         variable=self.mission_config_string,
                                         value=4,
-                                        command=partial(self.val_set, self.mission_config_string, 'All')).grid(column=0, row=0)
+                                        command=partial(self.val_set, self.mission_config_string,
+                                                        'All')).grid(column=0, row=0)
         mission_radio_gate = Radiobutton(mission_diag,
                                          text='Gate',
                                          variable=self.mission_config_string,
                                          value=3,
-                                         command=partial(self.val_set, self.mission_config_string, 'Gate')).grid(column=1, row=0)
+                                         command=partial(self.val_set, self.mission_config_string,
+                                                         'Gate')).grid(column=1, row=0)
         mission_radio_buoy = Radiobutton(mission_diag,
                                          text='Buoy',
                                          variable=self.mission_config_string,
                                          value=2,
-                                         command=partial(self.val_set, self.mission_config_string, 'Buoy')).grid(column=2, row=0)
+                                         command=partial(self.val_set, self.mission_config_string,
+                                                         'Buoy')).grid(column=2, row=0)
         mission_radio_rise = Radiobutton(mission_diag,
                                          text='Rise',
                                          variable=self.mission_config_string,
                                          value=1,
-                                         command=partial(self.val_set, self.mission_config_string, 'Rise')).grid(column=3, row=0)
+                                         command=partial(self.val_set, self.mission_config_string,
+                                                         'Rise')).grid(column=3, row=0)
         mission_radio_none = Radiobutton(mission_diag,
                                          text='None',
                                          variable=self.mission_config_string,
                                          value=0,
-                                         command=partial(self.val_set, self.mission_config_string, 'None')).grid(column=4, row=0)
+                                         command=partial(self.val_set, self.mission_config_string,
+                                                         'None')).grid(column=4, row=0)
 
     @staticmethod
-    def val_set(old, new) -> None:
-        """tkinter doesn't like calling old.set() within command= arguments, so it's done here!
+    def val_set(old: any, new: any) -> None:
+        """tkinter doesn't like calling old.set() within command= arguments, so it's done here
         """
         old.set(new)
 
-    def confirm_settings(self, top) -> None:
+    def confirm_settings(self, top: any) -> None:
         """Closes the config settings dialog box; changes variable to signify config is set.
         :param top: Window
         """
@@ -979,25 +845,6 @@ class Window(tk.Frame):
         self.cmd_config = config.gen_packet()
         self.config_is_set = True
         top.destroy()
-
-    def sensor_button_graph_switch(self, invert, max_val) -> None:
-        """Switches what is displayed on the graph.
-        """
-        if invert:
-            if self.current_graph_img_index == 0:
-                self.current_graph_img_index = max_val
-            else:
-                self.current_graph_img_index -= 1
-        else:
-            if self.current_graph_img_index == max_val:
-                self.current_graph_img_index = 0
-            else:
-                self.current_graph_img_index += 1
-        self.graph_current_sensor.itemconfig(self.graph_current_sensor_config,
-                                             image=self.canvas_img_by_index[self.current_graph_img_index])
-        self.graph_plt_canvas_widget.grid_forget()
-        self.graph_plt_canvas_widget = self.graph_plt_canvas_widgets[self.current_graph_img_index]
-        self.graph_plt_canvas_widget.grid(column=0, row=0)
 
     def client_exit(self) -> None:
         """Closes client.
@@ -1089,9 +936,10 @@ class Window(tk.Frame):
             self.text.see('end')
 
     @staticmethod
-    def update_button(button, enabled) -> None:
-        """Swaps button color if it doesn't match enabled.
-        NOTE: Called for red/green buttons.
+    def update_button(button: any, enabled: bool) -> None:
+        """Swaps button color if it doesn't match enabled. Called for red/green buttons.
+        :param button: tkinter button object or object w/ background component
+        :param enabled: boolean for switching a button's color
         """
         if (button.config('bg')[4] == 'red') and enabled:
             button.configure(button, bg='green')
@@ -1099,9 +947,10 @@ class Window(tk.Frame):
             button.configure(button, bg='red')
 
     @staticmethod
-    def update_button_enable(button, enabled) -> None:
-        """Swaps button color if it doesn't match enabled.
-        NOTE: Called for black/yellow buttons.
+    def update_button_enable(button: any, enabled: bool) -> None:
+        """Swaps button color if it doesn't match enabled. Called for black/yellow buttons.
+        :param button: tkinter button object or object w/ background component
+        :param enabled: boolean for switching a button's color
         """
         if (button.config('bg')[4] == 'black') and enabled:
             button.configure(button, bg='yellow')
@@ -1109,9 +958,10 @@ class Window(tk.Frame):
             button.configure(button, bg='black')
 
     @staticmethod
-    def update_button_int(button, status) -> None:
-        """Swaps button color if it doesn't match status.
-        NOTE: Called for different levels and black/yellow.
+    def update_button_int(button: any, status: int) -> None:
+        """Swaps button color if it doesn't match status. Called for different levels and black/yellow.
+        :param button: tkinter button object or object w/ background component and text
+        :param status: int that contains new code to place in button
         """
         if (button.config('bg')[4] == 'black') and (status > 0):
             button.configure(button, bg='yellow')
@@ -1121,22 +971,26 @@ class Window(tk.Frame):
             button.configure(button, text='     ')
 
     @staticmethod
-    def update_status_string(text, status) -> None:
-        """Sets text to status.
-        NOTE: Called for setting text boxes in Labels.
+    def update_status_string(text: any, status: str) -> None:
+        """Sets text to status. Called for setting text boxes in labels.
+        :param text: tkinter text box object or object w/ text component
+        :param status: str that contains new status
         """
         if text.config('text')[0] != status:
             text.configure(text, text=status)
 
     def update_frames(self) -> None:
-        """Checks pipe for data and updates frame in box
+        """Checks pipe for data and updates frame in video window if we have a new frame.
         """
-        if self.video_stream_pipe_in is not None:  # Checks for proper initialization first
+        if self.video_stream_pipe_in is not None:  # Check for proper initialization first
             conn = mp.connection.wait([self.video_stream_pipe_in], timeout=-1)
-            if len(conn) > 0:
+            if len(conn) > 0:  # Frame in pipe
                 frame = conn[0].recv()
+                # Convert from BGR to RGB
                 b, g, r = cv2.split(frame)
                 image = cv2.merge((r, g, b))
+                # Alternate between frames. Calling ImageTk then video_window itemconfig garbage collects the old frame
+                # A second frame that is alternated to is still garbage collected but not visibly.
                 self.frame_counter += 1
                 if self.frame_counter % 2 == 1:
                     self.img_2 = ImageTk.PhotoImage(PILImage.fromarray(image))
@@ -1146,8 +1000,7 @@ class Window(tk.Frame):
                     self.video_window.itemconfig(self.video_window_img, image=self.img)
 
     def send_controller_state(self) -> None:
-        """Sends current controller state to Pilot process
-        Updates frames
+        """Sends current controller state to Pilot process, then updates controller visualizer in GUI
         """
         if self.js.get_init() and self.pilot_socket_is_connected:
             control_in = np.zeros(shape=(1,
@@ -1227,6 +1080,7 @@ class Window(tk.Frame):
                                          pt2=(result_r2_x_bot, result_r2_y_bot),
                                          color=(255, 0, 0),
                                          thickness=-1)
+            # Alternate between frames similar to update_frames function
             self.lr_button_frame_counter += 1
             if self.joystick_frame_counter % 2 == 1:
                 self.l_button_img = ImageTk.PhotoImage(PILImage.fromarray(button_frame))
@@ -1238,7 +1092,6 @@ class Window(tk.Frame):
                 self.r_button_img_2 = ImageTk.PhotoImage(PILImage.fromarray(button_frame_2))
                 self.ctrl_l2_button.itemconfig(self.l_window_img, image=self.l_button_img_2)
                 self.ctrl_r2_button.itemconfig(self.r_window_img, image=self.r_button_img_2)
-
             # Joystick position update
             frame = cv2.imread('img/joystick_base_img.png')
             frame_2 = cv2.imread('img/joystick_base_img.png')
@@ -1464,79 +1317,11 @@ class Window(tk.Frame):
     def update_telemetry(self) -> None:
         """Updates the deques if 1 second has passed since the last update.
         """
-
         if self.telemetry_socket_is_connected:  # Check for conn before updating data
-            '''
-            if not self.iterated:  # Append initial start time to time deques
-                counter = 0
-                for i in self.input_time_deques:
-                    i.append(self.telemetry_current_state.time_series[
-                                 self.telemetry_current_state.index_reference[counter]])
-                self.start_time = peek(self.input_time_deques[0])
-            counter = 0
-            for i in self.input_time_deques:  # Append all new data to input deques
-                # if self.sensor_values_exist:
-                # If we have different timestamps, we got a new entry, so add it
-                top = peek(i)
-                if (top is not None) and (not self.sensor_values_exist):  # No data yet
-                    if top < self.telemetry_current_state.time_series[self.telemetry_current_state.index_reference[counter]]:
-                        i.append(self.telemetry_current_state.time_series[self.telemetry_current_state.index_reference[counter]])
-                        self.input_data_deques[counter].append(
-                            self.telemetry_current_state.sensors[self.telemetry_current_state.index_reference[counter]])
-                elif top is None and self.sensor_values_exist:  # No data, but it's incoming
-                    i.append(
-                        self.telemetry_current_state.time_series[self.telemetry_current_state.index_reference[counter]])
-                    self.input_data_deques[counter].append(
-                        self.telemetry_current_state.sensors[self.telemetry_current_state.index_reference[counter]])
-                elif top is not None and self.sensor_values_exist:  # Have data stored and incoming
-                    if top < self.telemetry_current_state.time_series[self.telemetry_current_state.index_reference[counter]]:
-                        i.append(self.telemetry_current_state.time_series[self.telemetry_current_state.index_reference[counter]])
-                        self.input_data_deques[counter].append(
-                            self.telemetry_current_state.sensors[self.telemetry_current_state.index_reference[counter]])
-                counter += 1
-            counter = 0
-            for i in self.input_time_deques:  # Check time series for >= 1 second elapsed, append data if true
-                if self.telemetry_current_state.time_series[self.telemetry_current_state.index_reference[counter]] != 0.0:
-                    if self.iterated and self.sensor_values_exist:
-                        top = peek(self.graph_time_deques[counter])
-                        top2 = peek(self.input_time_deques[counter])
-                        #print(f'top: {top} top2: {top2}')
-                        if (top is not None) and (top2 is not None):
-                            delta = math.floor(self.telemetry_current_state.time_series[
-                                                   self.telemetry_current_state.index_reference[counter]] - top)
-                            if delta >= 1:
-                                #print('t_delta >= 1')
-                                # Move data from stacks to queues, clear stack, send queue to graph
-                                if len(self.graph_time_deques[counter]) > self.graph_deque_size:
-                                    self.graph_time_deques[counter].popleft()
-                                    self.graph_data_deques[counter].popleft()
-                                _t = round(i.pop() - self.start_time)
-                                _d = self.input_data_deques[counter].pop()
-                                i.clear()
-                                self.input_data_deques[counter].clear()
-                                self.graph_time_deques[counter].append(_t)
-                                self.graph_data_deques[counter].append(_d)
-                                #print(f'{self.graph_time_deques[counter]}')
-                                #print(f'{self.graph_data_deques[counter]}')
-                                self.update_graph(data_x=list(self.graph_time_deques[counter]),
-                                    data_y=list(self.graph_data_deques[counter]),
-                                    graph_index=counter)
-                    else:  # First entry, push to deques
-                        _t = round(i.pop() - self.start_time)
-                        _d = self.input_data_deques[counter].pop()
-                        i.clear()
-                        self.input_data_deques[counter].clear()
-                        self.graph_time_deques[counter].append(_t)
-                        self.graph_data_deques[counter].append(_d)
-                        self.update_graph(data_x=list(self.graph_time_deques[counter]),
-                                          data_y=list(self.graph_data_deques[counter]),
-                                          graph_index=counter)
-                        self.sensor_values_exist = True
-                counter += 1
-            if self.sensor_values_exist and (not self.iterated):
-                self.iterated = True
-            '''
-            # Old update function temporarily left here while deques being worked on. Remove later!
+
+            sensor_frame = cv2.imread('img/sensor_base_new.png')
+
+            # Old update function temporarily left here. Remove later!
             self.accelerometer_x_val.configure(self.accelerometer_x_val,
                                                text=str(self.telemetry_current_state.sensors['accelerometer_x']))
             self.magnetometer_x_val.configure(self.magnetometer_x_val,
@@ -1559,13 +1344,6 @@ class Window(tk.Frame):
                                            text=str(self.telemetry_current_state.sensors['auto_button']))
             self.kill_button_val.configure(self.kill_button_val,
                                            text=str(self.telemetry_current_state.sensors['kill_button']))
-
-    def update_graph(self, data_x: list, data_y: list, graph_index: int) -> None:
-        """Updates the graphs with whatever is in the deques
-        """
-        self.graph_plt_plot_data[graph_index].set_xdata(data_x)
-        self.graph_plt_plot_data[graph_index].set_ydata(data_y)
-        self.graph_plt_canvases[graph_index].draw()
 
     def read_pipe(self) -> None:
         """Checks input pipe for info from other processes, processes commands here
@@ -1625,8 +1403,6 @@ class Window(tk.Frame):
         self.update_button_enable(self.pilot_socket_enable_button, self.pilot_socket_is_enabled.get())
         self.update_button_int(self.logging_socket_enable_button, self.logging_socket_level.get())
         self.update_status_string(self.mission_config_text_current, self.mission_config_string.get())
-        # DEMO PURPOSES ONLY
-        # print(self.telemetry_current_state.sensors['accelerometer'])  # Print accel data to show it's in GUI
 
         # Check for pipe updates
         self.read_pipe()
@@ -1634,12 +1410,14 @@ class Window(tk.Frame):
         self.after(gui_update_ms, self.update)
 
 
-def gui_proc_main(gui_input, gui_output, gui_logger, video_stream_pipe_in, pilot_pipe_out) -> None:
+def gui_proc_main(gui_input: mp.Pipe, gui_output: mp.Pipe, gui_logger: LoggerWrapper, video_stream_pipe_in: mp.Pipe,
+                  pilot_pipe_out: mp.Pipe) -> None:
     """GUI Driver code
     """
     # Build Application
     root_window = tk.Tk()
-    root_window.geometry(str(resolution[0] - edge_size - edge_size) + "x" + str(resolution[1] - top_bar_size - edge_size - edge_size))
+    root_window.geometry(str(resolution[0] - edge_size - edge_size) + "x" + str(resolution[1] - top_bar_size -
+                                                                                edge_size - edge_size))
     application = Window(pilot_pipe_out, master=root_window)
 
     # Queues for multiprocessing passed into object
@@ -1650,7 +1428,8 @@ def gui_proc_main(gui_input, gui_output, gui_logger, video_stream_pipe_in, pilot
     root_window.mainloop()
 
 
-def video_proc_udp(logger, video_pipe_in, video_pipe_out, video_stream_out) -> None:
+def video_proc_udp(logger: LoggerWrapper, video_pipe_in: mp.Pipe, video_pipe_out: mp.Pipe,
+                   video_stream_out: mp.Pipe) -> None:
     """Video socket driver code, run on a UDP connection.
     NOTE: Only work on this function if trying to fix for better performance.
     Should not be called otherwise. Left in place for testing purposes.
@@ -1714,7 +1493,8 @@ def video_proc_udp(logger, video_pipe_in, video_pipe_out, video_stream_out) -> N
             s.close()
 
 
-def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out) -> None:
+def video_proc_tcp(logger: LoggerWrapper, video_pipe_in: mp.Pipe, video_pipe_out: mp.Pipe,
+                   video_stream_out: mp.Pipe) -> None:
     """Video socket driver code, running on a TCP connection.
     """
     hostname = ''
@@ -1794,7 +1574,7 @@ def video_proc_tcp(logger, video_pipe_in, video_pipe_out, video_stream_out) -> N
                     video_stream_out.send(frame)
 
 
-def logging_proc(logger, logging_pipe_in, logging_pipe_out) -> None:
+def logging_proc(logger: LoggerWrapper, logging_pipe_in: mp.Pipe, logging_pipe_out: mp.Pipe) -> None:
     """Receives logs from Intelligence over TCP connection.
     """
     hostname = ''
@@ -1847,7 +1627,7 @@ def logging_proc(logger, logging_pipe_in, logging_pipe_out) -> None:
                         break
 
 
-def telemetry_proc(logger, telemetry_pipe_in, telemetry_pipe_out) -> None:
+def telemetry_proc(logger: LoggerWrapper, telemetry_pipe_in: mp.Pipe, telemetry_pipe_out: mp.Pipe) -> None:
     """Receives telemetry from Control over TCP connection.
     """
     hostname = ''
@@ -1893,8 +1673,9 @@ def telemetry_proc(logger, telemetry_pipe_in, telemetry_pipe_out) -> None:
                         server_conn = False
 
 
-def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui) -> None:
-    """Sends controller input to Control over TCP connection.
+def pilot_proc(logger: LoggerWrapper, pilot_pipe_in: mp.Pipe, pilot_pipe_out: mp.Pipe,
+               pipe_in_from_gui: mp.Pipe) -> None:
+    """Sends controller input to Pico's Control over TCP connection.
     """
     hostname = ''
     port = ''
@@ -1968,12 +1749,12 @@ def pilot_proc(logger, pilot_pipe_in, pilot_pipe_out, pipe_in_from_gui) -> None:
                         controller_input.clear()
 
 
-def router(logger,  # Gui logger
-           from_gui_pipe_in, to_gui_pipe_out,  # Gui pipe
-           from_video_pipe_in, to_video_pipe_out,  # Video pipe
-           from_logger_pipe_in, to_logger_pipe_out,
-           from_telemetry_pipe_in, to_telemetry_pipe_out,
-           from_pilot_pipe_in, to_pilot_pipe_out
+def router(logger: LoggerWrapper,  # Gui logger
+           from_gui_pipe_in: mp.Pipe, to_gui_pipe_out: mp.Pipe,  # Gui Message Pipe
+           from_video_pipe_in: mp.Pipe, to_video_pipe_out: mp.Pipe,  # Video Message Pipe
+           from_logger_pipe_in: mp.Pipe, to_logger_pipe_out: mp.Pipe,  # Logger Message Pipe
+           from_telemetry_pipe_in: mp.Pipe, to_telemetry_pipe_out: mp.Pipe,  # Sensor/Telemetry Message Pipe
+           from_pilot_pipe_in: mp.Pipe, to_pilot_pipe_out: mp.Pipe  # Pilot Message Pipe
            ) -> None:
     """Routes messages between pipes, given destination of the message.
     """
@@ -2012,12 +1793,15 @@ def main() -> None:
     # Dedicated Controller/Pilot stream pipe
     pipe_to_pilot_from_gui, pilot_pipe_in_from_gui = context.Pipe()
 
-    # Gui
+    # Gui Process
     gui_logger = LoggerWrapper()
-
     pipe_to_gui_from_router, gui_pipe_in_from_router = context.Pipe()
     pipe_to_router_from_gui, pipe_in_from_gui = context.Pipe()
-    gui_proc = context.Process(target=gui_proc_main, args=(gui_pipe_in_from_router, pipe_to_router_from_gui, gui_logger, pipe_in_from_video_stream, pipe_to_pilot_from_gui))
+    gui_proc = context.Process(target=gui_proc_main, args=(gui_pipe_in_from_router,
+                                                           pipe_to_router_from_gui,
+                                                           gui_logger,
+                                                           pipe_in_from_video_stream,
+                                                           pipe_to_pilot_from_gui))
     gui_proc.start()
     gui_logger.log('[Info]: Gui Initialized.')  # Log to Gui from main process
     gui_logger.log('+----------------------------+', strip=False)
@@ -2034,7 +1818,6 @@ def main() -> None:
     gui_logger.log('||                                                     ||', strip=False)
     gui_logger.log('+----------------------------+--------------------------+', strip=False)
     gui_logger.log(' ', strip=False)
-    print(' ')
 
     # Video socket
     pipe_to_video_from_router, vid_pipe_in_from_router = context.Pipe()
@@ -2063,7 +1846,7 @@ def main() -> None:
     plt_proc = context.Process(target=pilot_proc, args=(gui_logger, plt_pipe_in_from_router, pipe_to_router_from_pilot, pilot_pipe_in_from_gui))
     plt_proc.start()
 
-    # Router
+    # Message Router between processes
     router_proc = context.Process(target=router, args=(gui_logger,
                                                     pipe_in_from_gui, pipe_to_gui_from_router,  # Gui
                                                     pipe_in_from_video, pipe_to_video_from_router,  # Video
@@ -2080,8 +1863,8 @@ if __name__ == '__main__':
         set_start_method('spawn')
     else:
         set_start_method('fork')
-    print(__name__ + 'started on ' + n + ' at ' + str(os.getpid()))  # Kept for testing
+    print(f'{__name__} started on {n} at {os.getpid()}')  # Kept for testing
     main()
 
 else:
-    print('Spawned multiprocess at PID: ' + __name__ + ' ' + str(os.getpid()))  # Kept for testing
+    print(f'Spawned multiprocess at PID: {__name__} {os.getpid()}')  # Kept for testing
