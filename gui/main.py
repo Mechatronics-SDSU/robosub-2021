@@ -96,7 +96,7 @@ import src.utils.command_configuration as cmd
 system.modules['ip_config'] = ip_config
 
 # Command
-grpc_remote_client_port_default = '50051'
+grpc_remote_client_port_default = 50051
 default_hostname = 'localhost'
 default_command_port_grpc = 50052
 default_port_video_socket = 50001
@@ -366,101 +366,18 @@ class Window(tk.Frame):
 
         # Telemetry Window
         self.tel_window_old = tk.Frame(master=self.master, bg='white')
-        self.telemetry_window = tk.Frame(master=self.master, width=911, height=244, bg='black')
+        self.base_sensor_frame = cv2.imread('img/sensor_base_new.png')
+        self.telemetry_window = tk.Frame(master=self.master, width=1050, height=244, bg='black')
         self.telemetry_canvas_0 = tk.Canvas(master=self.telemetry_window, width=1050, height=244, bd=0, bg='green')
         self.telemetry_canvas_0_img = ImageTk.PhotoImage(PILImage.open('img/sensor_base_new.png'))
+        self.telemetry_canvas_1_img = ImageTk.PhotoImage(PILImage.open('img/sensor_base_new.png'))
+        self.telemetry_frame_counter = 0
         self.telemetry_canvas_0_config = self.telemetry_canvas_0.create_image((2, 2),
                                                                               anchor=tk.NW,
                                                                               image=self.telemetry_canvas_0_img)
         self.sensors_text = tk.Canvas(master=self.master, width=100, height=24, bd=0, bg='green')
         self.sensors_text_img = ImageTk.PhotoImage(PILImage.open('img/sensors_text.png'))
         self.sensors_text.create_image((2, 2), anchor=tk.NW, image=self.sensors_text_img)
-        self.telemetry_window_names = tk.Frame(master=self.tel_window_old)
-        self.telemetry_window_values = tk.Frame(master=self.tel_window_old)
-
-        self.telemetry_colpad = tk.Label(master=self.telemetry_window_names, text='Telemetry Data:', bd=0, anchor='w',
-                                         bg='white', justify=tk.LEFT)
-        self.telemetry_colpad_2 = tk.Label(master=self.telemetry_window_values, text='          ', bd=0, anchor='w',
-                                         bg='white', justify=tk.LEFT)
-
-        # Sensors
-        self.accelerometer_x_text = tk.Label(master=self.telemetry_window_names, text='Accelerometer_X', bd=0,
-                                             anchor='w', bg='white', justify=tk.LEFT)
-        self.accelerometer_x_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['accelerometer_x']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.accelerometer_y_text = tk.Label(master=self.telemetry_window_names, text='Accelerometer_Y', bd=0,
-                                            anchor='w', bg='white', justify=tk.LEFT)
-        self.accelerometer_y_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['accelerometer_y']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.accelerometer_z_text = tk.Label(master=self.telemetry_window_names, text='Accelerometer_Z', bd=0,
-                                             anchor='w', bg='white', justify=tk.LEFT)
-        self.accelerometer_z_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['accelerometer_z']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.magnetometer_x_text = tk.Label(master=self.telemetry_window_names, text='Magnetometer_X', bd=0, anchor='w',
-                                            bg='white', justify=tk.LEFT)
-        self.magnetometer_x_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['magnetometer_x']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.magnetometer_y_text = tk.Label(master=self.telemetry_window_names, text='Magnetometer_Y', bd=0, anchor='w',
-                                            bg='white', justify=tk.LEFT)
-        self.magnetometer_y_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['magnetometer_y']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.magnetometer_z_text = tk.Label(master=self.telemetry_window_names, text='Magnetometer_Z', bd=0, anchor='w',
-                                            bg='white', justify=tk.LEFT)
-        self.magnetometer_z_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['magnetometer_z']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.pressure_trans_text = tk.Label(master=self.telemetry_window_names, text='Pressure_Transducer', bd=0,
-                                            anchor='w', bg='white', justify=tk.LEFT)
-        self.pressure_trans_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['pressure_transducer']), bd=0, anchor='w', bg='white',
-                                           justify=tk.LEFT)
-        self.gyroscope_x_text = tk.Label(master=self.telemetry_window_names, text='Gyroscope_X', bd=0, anchor='w',
-                                         bg='white', justify=tk.LEFT)
-        self.gyroscope_x_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['gyroscope_x']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.gyroscope_y_text = tk.Label(master=self.telemetry_window_names, text='Gyroscope_Y', bd=0, anchor='w',
-                                         bg='white', justify=tk.LEFT)
-        self.gyroscope_y_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['gyroscope_y']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.gyroscope_z_text = tk.Label(master=self.telemetry_window_names, text='Gyroscope_Z', bd=0, anchor='w',
-                                         bg='white', justify=tk.LEFT)
-        self.gyroscope_z_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['gyroscope_z']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.voltmeter_text = tk.Label(master=self.telemetry_window_names, text='Voltmeter', bd=0, anchor='w',
-                                       bg='white', justify=tk.LEFT)
-        self.voltmeter_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['voltmeter']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.battery_current_text = tk.Label(master=self.telemetry_window_names, text='Battery_Current', bd=0,
-                                             anchor='w', bg='white', justify=tk.LEFT)
-        self.battery_current_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['battery_current']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.roll_text = tk.Label(master=self.telemetry_window_names, text='Roll', bd=0, anchor='w', bg='white',
-                                  justify=tk.LEFT)
-        self.battery_voltage_1_text = tk.Label(master=self.telemetry_window_names, text='Battery_1_Volts', bd=0,
-                                             anchor='w', bg='white', justify=tk.LEFT)
-        self.battery_voltage_1_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['battery_1_voltage']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.battery_voltage_2_text = tk.Label(master=self.telemetry_window_names, text='Battery_2_Volts', bd=0,
-                                               anchor='w', bg='white', justify=tk.LEFT)
-        self.battery_voltage_2_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['battery_2_voltage']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.roll_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['roll']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.pitch_text = tk.Label(master=self.telemetry_window_names, text='Pitch', bd=0, anchor='w', bg='white',
-                                   justify=tk.LEFT)
-        self.pitch_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['pitch']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.yaw_text = tk.Label(master=self.telemetry_window_names, text='Yaw', bd=0, anchor='w', bg='white',
-                                 justify=tk.LEFT)
-        self.yaw_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['yaw']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.auto_button_text = tk.Label(master=self.telemetry_window_names, text='Button_Auto', bd=0, anchor='w',
-                                         bg='white', justify=tk.LEFT)
-        self.auto_button_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['auto_button']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
-        self.kill_button_text = tk.Label(master=self.telemetry_window_names, text='Button_Kill', bd=0, anchor='w',
-                                         bg='white', justify=tk.LEFT)
-        self.kill_button_val = tk.Label(master=self.telemetry_window_values, text=str(
-            self.telemetry_current_state.sensors['kill_button']), bd=0, anchor='w', bg='white', justify=tk.LEFT)
 
         # Controller Window
         self.controller_window = tk.Canvas(master=self.master, width=213, height=140, bg='white')
@@ -630,45 +547,6 @@ class Window(tk.Frame):
         # Telemetry Window
         self.telemetry_window.grid(column=1, row=4, sticky=NW, columnspan=3, rowspan=3)
         self.telemetry_canvas_0.grid(column=0, row=0)
-        self.tel_window_old.grid(column=4, row=3, rowspan=3)
-        self.telemetry_window_names.grid(column=0, row=0)
-        self.telemetry_window_values.grid(column=1, row=0)
-        self.telemetry_colpad.grid(column=0, row=0)
-        self.telemetry_colpad_2.grid(column=1, row=0)
-        self.accelerometer_x_text.grid(column=0, row=1, sticky=W, columnspan=2)
-        self.accelerometer_x_val.grid(column=0, row=1, sticky=W)
-        self.accelerometer_y_text.grid(column=0, row=2, sticky=W, columnspan=2)
-        self.accelerometer_y_val.grid(column=0, row=2, sticky=W)
-        self.accelerometer_z_text.grid(column=0, row=3, sticky=W, columnspan=2)
-        self.accelerometer_z_val.grid(column=0, row=3, sticky=W)
-        self.magnetometer_x_text.grid(column=0, row=4, sticky=W, columnspan=2)
-        self.magnetometer_x_val.grid(column=0, row=4, sticky=W)
-        self.magnetometer_y_text.grid(column=0, row=5, sticky=W, columnspan=2)
-        self.magnetometer_y_val.grid(column=0, row=5, sticky=W)
-        self.magnetometer_z_text.grid(column=0, row=6, sticky=W, columnspan=2)
-        self.magnetometer_z_val.grid(column=0, row=6, sticky=W)
-        self.pressure_trans_text.grid(column=0, row=7, sticky=W, columnspan=2)
-        self.pressure_trans_val.grid(column=0, row=7, sticky=W)
-        self.gyroscope_x_text.grid(column=0, row=8, sticky=W, columnspan=2)
-        self.gyroscope_x_val.grid(column=0, row=8, sticky=W)
-        self.gyroscope_y_text.grid(column=0, row=9, sticky=W, columnspan=2)
-        self.gyroscope_y_val.grid(column=0, row=9, sticky=W)
-        self.gyroscope_z_text.grid(column=0, row=10, sticky=W, columnspan=2)
-        self.gyroscope_z_val.grid(column=0, row=10, sticky=W)
-        self.voltmeter_text.grid(column=0, row=11, sticky=W, columnspan=2)
-        self.voltmeter_val.grid(column=0, row=11, sticky=W)
-        self.battery_current_text.grid(column=0, row=12, sticky=W, columnspan=2)
-        self.battery_current_val.grid(column=0, row=12, sticky=W)
-        self.battery_voltage_1_text.grid(column=0, row=13, sticky=W, columnspan=2)
-        self.battery_voltage_1_val.grid(column=0, row=13, sticky=W)
-        self.battery_voltage_2_text.grid(column=0, row=14, sticky=W, columnspan=2)
-        self.battery_voltage_2_val.grid(column=0, row=14, sticky=W)
-        self.roll_text.grid(column=0, row=15, sticky=W, columnspan=2)
-        self.roll_val.grid(column=0, row=15, sticky=W)
-        self.pitch_text.grid(column=0, row=16, sticky=W, columnspan=2)
-        self.pitch_val.grid(column=0, row=16, sticky=W)
-        self.yaw_text.grid(column=0, row=17, sticky=W, columnspan=2)
-        self.yaw_val.grid(column=0, row=17, sticky=W)
 
         # Controller Window
         self.controller_window.grid(column=0, row=4, sticky=NW)
@@ -1315,35 +1193,91 @@ class Window(tk.Frame):
                 self.thruster_canvas.itemconfig(self.thruster_window_img, image=self.thruster_img_1)
 
     def update_telemetry(self) -> None:
-        """Updates the deques if 1 second has passed since the last update.
+        """Updates the telemetry display with updated data.
         """
         if self.telemetry_socket_is_connected:  # Check for conn before updating data
-
             sensor_frame = cv2.imread('img/sensor_base_new.png')
-
-            # Old update function temporarily left here. Remove later!
-            self.accelerometer_x_val.configure(self.accelerometer_x_val,
-                                               text=str(self.telemetry_current_state.sensors['accelerometer_x']))
-            self.magnetometer_x_val.configure(self.magnetometer_x_val,
-                                              text=str(self.telemetry_current_state.sensors['magnetometer_x']))
-            self.pressure_trans_val.configure(self.pressure_trans_val,
-                                             text=str(self.telemetry_current_state.sensors['pressure_transducer']))
-            self.gyroscope_x_val.configure(self.gyroscope_x_val,
-                                           text=str(self.telemetry_current_state.sensors['gyroscope_x']))
-            self.voltmeter_val.configure(self.voltmeter_val,
-                                        text=str(self.telemetry_current_state.sensors['voltmeter']))
-            self.battery_current_val.configure(self.battery_current_val,
-                                             text=str(self.telemetry_current_state.sensors['battery_current']))
-            self.roll_val.configure(self.roll_val,
-                                    text=str(self.telemetry_current_state.sensors['roll']))
-            self.pitch_val.configure(self.pitch_val,
-                                    text=str(self.telemetry_current_state.sensors['pitch']))
-            self.yaw_val.configure(self.yaw_val,
-                                   text=str(self.telemetry_current_state.sensors['yaw']))
-            self.auto_button_val.configure(self.auto_button_val,
-                                           text=str(self.telemetry_current_state.sensors['auto_button']))
-            self.kill_button_val.configure(self.kill_button_val,
-                                           text=str(self.telemetry_current_state.sensors['kill_button']))
+            cv2.putText(img=sensor_frame, text='Accelerometer', org=(8, 25),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green, thickness=1)
+            cv2.putText(img=sensor_frame, text=f'X: {round(self.telemetry_current_state.sensors["accelerometer_x"], 3)}',
+                        org=(8, 50), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green, thickness=1)
+            cv2.putText(img=sensor_frame,
+                        text=f'Y: {round(self.telemetry_current_state.sensors["accelerometer_y"], 3)}',
+                        org=(8, 75), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green, thickness=1)
+            cv2.putText(img=sensor_frame,
+                        text=f'Z: {round(self.telemetry_current_state.sensors["accelerometer_z"], 3)}',
+                        org=(8, 100), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green, thickness=1)
+            cv2.putText(img=sensor_frame, text='Voltmeter', org=(8, 125),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green, thickness=1)
+            cv2.putText(img=sensor_frame, text=f'{round(self.telemetry_current_state.sensors["voltmeter"], 3)}',
+                        org=(8, 150), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green, thickness=1)
+            cv2.putText(img=sensor_frame, text='Battery Current', org=(8, 175),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green, thickness=1)
+            cv2.putText(img=sensor_frame, text=f'{round(self.telemetry_current_state.sensors["battery_current"], 3)}',
+                        org=(8, 200), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green, thickness=1)
+            # cv2.putText(img=sensor_frame, text=str(self.telemetry_frame_counter), org=(8, 225),
+            #            fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green, thickness=1)
+            cv2.putText(img=sensor_frame, text='Gyroscope', org=(248, 25),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green, thickness=1)
+            cv2.putText(img=sensor_frame, text=f'X: {round(self.telemetry_current_state.sensors["gyroscope_x"], 3)}'
+                        , org=(248, 50), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame, text=f'Y: {round(self.telemetry_current_state.sensors["gyroscope_y"], 3)}'
+                        , org=(248, 75), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame, text=f'Z: {round(self.telemetry_current_state.sensors["gyroscope_z"], 3)}'
+                        , org=(248, 100), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame, text='Battery 1 Volts', org=(248, 125),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green, thickness=1)
+            cv2.putText(img=sensor_frame, text=f'{round(self.telemetry_current_state.sensors["battery_1_voltage"], 3)}',
+                        org=(248, 150), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame, text='Battery 2 Volts', org=(248, 175),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green, thickness=1)
+            cv2.putText(img=sensor_frame, text=f'{round(self.telemetry_current_state.sensors["battery_2_voltage"], 3)}',
+                        org=(248, 200), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame, text='Magnetometer', org=(488, 25),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green, thickness=1)
+            cv2.putText(img=sensor_frame, text=f'X: {round(self.telemetry_current_state.sensors["magnetometer_x"], 3)}'
+                        , org=(488, 50), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame, text=f'Y: {round(self.telemetry_current_state.sensors["magnetometer_y"], 3)}'
+                        , org=(488, 75), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame, text=f'Z: {round(self.telemetry_current_state.sensors["magnetometer_z"], 3)}'
+                        , org=(488, 100), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame, text='Pressure Transducer', org=(488, 125),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green, thickness=1)
+            cv2.putText(img=sensor_frame, text=f'{round(self.telemetry_current_state.sensors["pressure_transducer"], 3)}',
+                        org=(488, 150), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame, text='Roll',
+                        org=(728, 25), fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green, thickness=1)
+            cv2.putText(img=sensor_frame, text=f'{round(self.telemetry_current_state.sensors["roll"], 3)}'
+                        , org=(728, 50), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame, text='Pitch',
+                        org=(728, 75), fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame, text=f'{round(self.telemetry_current_state.sensors["pitch"], 3)}'
+                        , org=(728, 100), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame, text='Yaw',
+                        org=(728, 125), fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame, text=f'{round(self.telemetry_current_state.sensors["yaw"], 3)}'
+                        , org=(728, 150), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+                        thickness=1)
+            self.telemetry_frame_counter += 1
+            if self.telemetry_frame_counter % 2 == 1:
+                self.telemetry_canvas_1_img = ImageTk.PhotoImage(PILImage.fromarray(sensor_frame))
+                self.telemetry_canvas_0.itemconfig(self.telemetry_canvas_0_config, image=self.telemetry_canvas_1_img)
+            else:
+                self.telemetry_canvas_0_img = ImageTk.PhotoImage(PILImage.fromarray(sensor_frame))
+                self.telemetry_canvas_0.itemconfig(self.telemetry_canvas_0_config, image=self.telemetry_canvas_0_img)
 
     def read_pipe(self) -> None:
         """Checks input pipe for info from other processes, processes commands here
@@ -1372,9 +1306,7 @@ class Window(tk.Frame):
                         elif gui_cmd[2] == 'no_conn_socket':
                             self.telemetry_socket_is_connected = False
                     elif isinstance(gui_cmd[2], bytes):
-                        _t = self.telemetry_current_state.load_data_from_bytes(gui_cmd[2])
-                        if _t != 0:
-                            self.logger.log('[ERROR] TEL failed to load data, error code ' + str(_t))
+                        self.telemetry_current_state.load_data_from_bytes(gui_cmd[2])
                 elif gui_cmd[1] == 'pilot':
                     if gui_cmd[2] == 'conn_socket':
                         self.pilot_socket_is_connected = True

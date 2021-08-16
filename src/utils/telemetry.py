@@ -120,7 +120,7 @@ class Telemetry:
         else:  # Failed to load list arg or data already loaded
             return False
 
-    def load_data_from_bytes(self, data: bytes) -> int:
+    def load_data_from_bytes(self, data: bytes) -> bool:
         """Load a bytes object into a numpy array
         :param data: Converted numpy array using tobytes
         :return If it worked
@@ -134,15 +134,15 @@ class Telemetry:
                     self.sensors[i] = loaded_data[counter]
                     counter += 1
                 except IndexError:
-                    return 1
+                    return False
                 try:
                     self.time_series[i] = loaded_data[counter]
                     counter += 1
                 except IndexError:
-                    return 2
-            return 0
+                    return False
+            return True
         else:  # Failed to load numpy array from bytes or data already loaded
-            return 3
+            return False
 
     def to_bytes(self):
         """Converts class data into a numpy array.
