@@ -47,7 +47,7 @@ class Motherboard_Driver:
         Unpack the data received after a request is sent to the motherboard.
         Only receive the packet type requested
         """
-
+        self.ser.flush()
         if self.ser.in_waiting > 0:
             header_byte = ord(self.ser.read())
             print("Serial buffer is recieving")
@@ -57,8 +57,22 @@ class Motherboard_Driver:
                 print(hex(msg_type))
                 if (hex(msg_type) == hex(self.GET_DEPTH)) and (requested_packet_type == self.GET_DEPTH):
                     print("Unpacking data")
-                    data_temp = self.ser.read(4)
-                    data = struct.unpack('<f', data_temp)
+                    size = struct.calcsize('<f')
+                    self.ser.flush()
+                    if self.ser.in_waiting >= size:
+                        '''
+                        test_byte = ord(self.ser.read())
+                        print(str(test_byte) + " " + str(hex(test_byte)))
+                        '''
+                        data_temp = self.ser.read(size=4)
+                        data = struct.unpack('<f', data_temp)
+                        print(data)
+                    else:
+                        test_data = ''
+                        for i in range(4):
+                            if self.ser.in_waiting:
+                                test_data += str(ord(self.ser.read())) + ' '
+                        print(test_data)
                 else:
                     return "Message type and request type dont match"
 

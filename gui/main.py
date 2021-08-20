@@ -95,7 +95,7 @@ import src.utils.command_configuration as cmd
 
 system.modules['ip_config'] = ip_config
 
-# Command
+# Ports
 grpc_remote_client_port_default = 50051
 default_hostname = 'localhost'
 default_command_port_grpc = 50052
@@ -103,6 +103,14 @@ default_port_video_socket = 50001
 default_port_logging_socket = 50002
 default_port_telemetry_socket = 50003
 default_port_pilot_socket = 50004
+default_ports = {
+    'Command': 50052,
+    'Video': 50001,
+    'Logging': 50002,
+    'Telemetry': 50003,
+    'Pilot': 50004
+}
+
 
 # GUI
 top_bar_size = 30
@@ -201,6 +209,19 @@ class LoggerWrapper:
             return None
 
 
+class PortConfigWrapper:
+    """Allows for real time changes to ports in the prompt.
+    """
+    def __init__(self, command: any, video: any, logger: any, telemetry: any, pilot: any) -> None:
+        self.port_config_labels = {
+            'Command': command,
+            'Video': video,
+            'Logger': logger,
+            'Telemetry': telemetry,
+            'Pilot': pilot
+        }
+
+
 class CMDGrpcClient:
     """Handles GRPC clients with related methods.
     """
@@ -238,11 +259,19 @@ class Window(tk.Frame):
     def __init__(self, pilot_pipe: mp.Pipe, master=None) -> None:
         # Load ports from config file or set to defaults
         self.remote_hostname = default_hostname
-        self.port_command_grpc = default_command_port_grpc
-        self.port_video_socket = default_port_video_socket
-        self.port_logging_socket = default_port_logging_socket
-        self.port_telemetry_socket = default_port_telemetry_socket
-        self.port_pilot_socket = default_port_pilot_socket
+        self.ports_dict = {
+            'Command': default_command_port_grpc,
+            'Video': default_port_video_socket,
+            'Logging': default_port_logging_socket,
+            'Telemetry': default_port_telemetry_socket,
+            'Pilot': default_port_pilot_socket
+        }
+        self.port_command_grpc = self.ports_dict['Command']
+        self.port_video_socket = self.ports_dict['Video']
+        self.port_logging_socket = self.ports_dict['Logging']
+        self.port_telemetry_socket = self.ports_dict['Telemetry']
+        self.port_pilot_socket = self.ports_dict['Pilot']
+
         self.cfg_file_path = 'config.pickle'
         if os.path.exists(self.cfg_file_path):
             ip = ip_config.load_config_from_file(self.cfg_file_path)
@@ -476,17 +505,20 @@ class Window(tk.Frame):
         config_button = Button(master=self.top_bar, text='Enable Sockets', justify=LEFT, anchor='w',
                                command=partial(self.config_box))
         config_button.grid(column=2, row=0, sticky=W)
+        port_config_button = Button(master=self.top_bar, text='Change Ports', justify=LEFT, anchor='w',
+                                    command=partial(self.port_config_box))
+        port_config_button.grid(column=3, row=0, sticky=W)
         # Send Command Config
         send_config_button = Button(master=self.top_bar, text='Send', justify=LEFT, anchor='w',
                                     command=self.cmd_grpc_button)
-        send_config_button.grid(column=3, row=0, sticky=W)
+        send_config_button.grid(column=4, row=0, sticky=W)
         # Sockets
         config_text = Label(master=self.top_bar, text='Sockets: ', justify=LEFT, anchor='w')
-        config_text.grid(column=4, row=0, sticky=W)
+        config_text.grid(column=5, row=0, sticky=W)
         # All
         start_all_sockets_button = Button(master=self.top_bar, text='Start', justify=LEFT, anchor='w',
                                           command=self.init_all_enabled_sockets)
-        start_all_sockets_button.grid(column=5, row=0, sticky=W)
+        start_all_sockets_button.grid(column=6, row=0, sticky=W)
         # Quit Button
         quit_button = Button(master=self.top_bar, text='Exit', justify=LEFT, anchor='w', command=self.client_exit)
         quit_button.grid(column=9, row=0, sticky=W)
@@ -704,6 +736,98 @@ class Window(tk.Frame):
                                          command=partial(self.val_set, self.mission_config_string,
                                                          'None')).grid(column=4, row=0)
 
+    def port_config_box(self) -> None:
+        """Creates a diag box to set the config for the ports.
+        This configuration is optional and not necessary if using default ports.
+        """
+        top = tk.Toplevel(self.master)  # Make a separate window
+        port_config_diag = tk.Label(top, text='Set IPV4 Port Configuration:',
+                                    pady=10,
+                                    justify='left',
+                                    anchor='nw')
+        port_config_diag.grid(column=0, row=0, sticky=W, columnspan=2)
+        # GRPC Command
+        port_grpc_title = tk.Label(top, text='GRPC')
+        port_grpc_diag = tk.Label(top)
+        port_video_title = tk.Label(top, text='Video')
+        port_video_diag = tk.Label(top)
+        port_logger_title = tk.Label(top, text='Logger')
+        port_logger_diag = tk.Label(top)
+        port_telemetry_title = tk.Label(top, text='Telemetry')
+        port_telemetry_diag = tk.Label(top)
+        port_pilot_title = tk.Label(top, text='Pilot')
+        port_pilot_diag = tk.Label(top)
+        port_grpc_title.grid(column=0, row=1, sticky=W)
+        port_grpc_diag.grid(column=1, row=1, sticky=W, columnspan=2)
+        port_video_title.grid(column=0, row=2, sticky=W)
+        port_video_diag.grid(column=1, row=2, sticky=W, columnspan=2)
+        port_logger_title.grid(column=0, row=3, sticky=W)
+        port_logger_diag.grid(column=1, row=3, sticky=W, columnspan=2)
+        port_telemetry_title.grid(column=0, row=4, sticky=W)
+        port_telemetry_diag.grid(column=1, row=4, sticky=W, columnspan=2)
+        port_pilot_title.grid(column=0, row=5, sticky=W)
+        port_pilot_diag.grid(column=1, row=5, sticky=W, columnspan=2)
+
+        # Labels
+        port_grpc_text = tk.Label(master=port_grpc_diag, text=str(self.port_command_grpc))
+        port_video_text = tk.Label(master=port_video_diag, text=str(self.port_video_socket))
+        port_logger_text = tk.Label(master=port_logger_diag, text=str(self.port_logging_socket))
+        port_telemetry_text = tk.Label(master=port_telemetry_diag, text=str(self.port_telemetry_socket))
+        port_pilot_text = tk.Label(master=port_pilot_diag, text=str(self.port_pilot_socket))
+        pcr = PortConfigWrapper(command=port_grpc_text,
+                                video=port_video_text,
+                                logger=port_logger_text,
+                                telemetry=port_telemetry_text,
+                                pilot=port_pilot_text)
+        # Buttons
+        port_grpc_button = tk.Button(master=port_grpc_diag, text='Set', command=partial(
+            self.port_text_box, 'Command', self.port_command_grpc, top, pcr, self.cmd_status_port))
+        port_video_button = tk.Button(master=port_video_diag, text='Set', command=partial(
+            self.port_text_box, 'Video', self.port_video_socket, top, pcr, self.cmd_status_port))
+        port_logger_button = tk.Button(master=port_logger_diag, text='Set', command=partial(
+            self.port_text_box, 'Logger', self.port_logging_socket, top, pcr, self.cmd_status_port))
+        port_telemetry_button = tk.Button(master=port_telemetry_diag, text='Set', command=partial(
+            self.port_text_box, 'Telemetry', self.port_telemetry_socket, top, pcr, self.cmd_status_port))
+        port_pilot_button = tk.Button(master=port_pilot_diag, text='Set', command=partial(
+            self.port_text_box, 'Pilot', self.port_pilot_socket, top, pcr, self.cmd_status_port))
+
+        port_grpc_text.grid(column=0, row=0, sticky=W)
+        port_grpc_button.grid(column=1, row=0, sticky=W)
+        port_video_text.grid(column=0, row=1, sticky=W)
+        port_video_button.grid(column=1, row=1, sticky=W)
+        port_logger_text.grid(column=0, row=2, sticky=W)
+        port_logger_button.grid(column=1, row=2, sticky=W)
+        port_telemetry_text.grid(column=0, row=3, sticky=W)
+        port_telemetry_button.grid(column=1, row=3, sticky=W)
+        port_pilot_text.grid(column=0, row=4, sticky=W)
+        port_pilot_button.grid(column=1, row=4, sticky=W)
+
+    def port_text_box(self, port_name: str, current_port: int, parent_window: any, config: PortConfigWrapper,
+                      label: any) -> None:
+        """Generates a text box for setting the port.
+        :param port_name:
+        :param current_port:
+        :param parent_window:
+        :param config:
+        :param label:
+        """
+        prompt = simpledialog.askstring('Input', f'Set the {port_name} port here: (Currently {current_port})',
+                                        parent=parent_window)
+        if isinstance(prompt, str):  # None returned if window is closed
+            try:
+                new_port = int(prompt)
+            except ValueError as e:
+                new_port = default_ports[port_name]
+                self.logger.log(f'[Warn]: Attempt to pass invalid port {prompt}, defaulting to {new_port}')
+            self.ports_dict[port_name] = new_port
+            self.port_command_grpc = self.ports_dict['Command']
+            self.port_video_socket = self.ports_dict['Video']
+            self.port_logging_socket = self.ports_dict['Logger']
+            self.port_telemetry_socket = self.ports_dict['Telemetry']
+            self.port_pilot_socket = self.ports_dict['Pilot']
+            # Set the called window's port
+            config.port_config_labels[port_name].configure(label, text=self.ports_dict[port_name])
+
     @staticmethod
     def val_set(old: any, new: any) -> None:
         """tkinter doesn't like calling old.set() within command= arguments, so it's done here
@@ -802,15 +926,19 @@ class Window(tk.Frame):
             self.logger.log('[Warn]: Attempt to pass invalid ip address, defaulting to localhost.')
 
     def run_logger(self) -> None:
-        """Adds the first element in the queue to the logs.
+        """Adds all elements in the queue to the logs.
         """
         if self.logger.queue.qsize() > 0:
-            self.text.insert(END, self.logger.dequeue())
+            counter = self.logger.queue.qsize()
+            for i in range(counter):
+                self.text.insert(END, self.logger.dequeue())
             self.text.see('end')
         if len(self.remote_logging_queue) > 0:
-            text = self.remote_logging_queue[0].strip() + '\n'
-            self.text.insert(END, text)
-            self.remote_logging_queue = self.remote_logging_queue[1:]
+            counter = self.remote_logging_queue
+            for i in counter:
+                text = self.remote_logging_queue[0].strip() + '\n'
+                self.text.insert(END, text)
+                self.remote_logging_queue = self.remote_logging_queue[1:]
             self.text.see('end')
 
     @staticmethod
@@ -1197,79 +1325,203 @@ class Window(tk.Frame):
         """
         if self.telemetry_socket_is_connected:  # Check for conn before updating data
             sensor_frame = cv2.imread('img/sensor_base_new.png')
-            cv2.putText(img=sensor_frame, text='Accelerometer', org=(8, 25),
-                        fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green, thickness=1)
-            cv2.putText(img=sensor_frame, text=f'X: {round(self.telemetry_current_state.sensors["accelerometer_x"], 3)}',
-                        org=(8, 50), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green, thickness=1)
+            cv2.putText(img=sensor_frame,
+                        text='Accelerometer',
+                        org=(8, 25),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN,
+                        fontScale=1.2,
+                        color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame,
+                        text=f'X: {round(self.telemetry_current_state.sensors["accelerometer_x"], 3)}',
+                        org=(8, 50),
+                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                        fontScale=0.8,
+                        color=terminal_green,
+                        thickness=1)
             cv2.putText(img=sensor_frame,
                         text=f'Y: {round(self.telemetry_current_state.sensors["accelerometer_y"], 3)}',
-                        org=(8, 75), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green, thickness=1)
+                        org=(8, 75),
+                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                        fontScale=0.8,
+                        color=terminal_green,
+                        thickness=1)
             cv2.putText(img=sensor_frame,
                         text=f'Z: {round(self.telemetry_current_state.sensors["accelerometer_z"], 3)}',
-                        org=(8, 100), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green, thickness=1)
-            cv2.putText(img=sensor_frame, text='Voltmeter', org=(8, 125),
-                        fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green, thickness=1)
-            cv2.putText(img=sensor_frame, text=f'{round(self.telemetry_current_state.sensors["voltmeter"], 3)}',
-                        org=(8, 150), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green, thickness=1)
-            cv2.putText(img=sensor_frame, text='Battery Current', org=(8, 175),
-                        fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green, thickness=1)
-            cv2.putText(img=sensor_frame, text=f'{round(self.telemetry_current_state.sensors["battery_current"], 3)}',
-                        org=(8, 200), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green, thickness=1)
+                        org=(8, 100),
+                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                        fontScale=0.8,
+                        color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame,
+                        text='Voltmeter',
+                        org=(8, 125),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN,
+                        fontScale=1.2,
+                        color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame,
+                        text=f'{round(self.telemetry_current_state.sensors["voltmeter"], 3)}',
+                        org=(8, 150),
+                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                        fontScale=0.8,
+                        color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame,
+                        text='Battery Current',
+                        org=(8, 175),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN,
+                        fontScale=1.2,
+                        color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame,
+                        text=f'{round(self.telemetry_current_state.sensors["battery_current"], 3)}',
+                        org=(8, 200),
+                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                        fontScale=0.8,
+                        color=terminal_green,
+                        thickness=1)
             # cv2.putText(img=sensor_frame, text=str(self.telemetry_frame_counter), org=(8, 225),
             #            fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green, thickness=1)
-            cv2.putText(img=sensor_frame, text='Gyroscope', org=(248, 25),
-                        fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green, thickness=1)
-            cv2.putText(img=sensor_frame, text=f'X: {round(self.telemetry_current_state.sensors["gyroscope_x"], 3)}'
-                        , org=(248, 50), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+            cv2.putText(img=sensor_frame,
+                        text='Gyroscope',
+                        org=(248, 25),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN,
+                        fontScale=1.2,
+                        color=terminal_green,
                         thickness=1)
-            cv2.putText(img=sensor_frame, text=f'Y: {round(self.telemetry_current_state.sensors["gyroscope_y"], 3)}'
-                        , org=(248, 75), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+            cv2.putText(img=sensor_frame,
+                        text=f'X: {round(self.telemetry_current_state.sensors["gyroscope_x"], 3)}',
+                        org=(248, 50),
+                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                        fontScale=0.8,
+                        color=terminal_green,
                         thickness=1)
-            cv2.putText(img=sensor_frame, text=f'Z: {round(self.telemetry_current_state.sensors["gyroscope_z"], 3)}'
-                        , org=(248, 100), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+            cv2.putText(img=sensor_frame,
+                        text=f'Y: {round(self.telemetry_current_state.sensors["gyroscope_y"], 3)}',
+                        org=(248, 75),
+                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                        fontScale=0.8,
+                        color=terminal_green,
                         thickness=1)
-            cv2.putText(img=sensor_frame, text='Battery 1 Volts', org=(248, 125),
-                        fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green, thickness=1)
-            cv2.putText(img=sensor_frame, text=f'{round(self.telemetry_current_state.sensors["battery_1_voltage"], 3)}',
-                        org=(248, 150), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+            cv2.putText(img=sensor_frame,
+                        text=f'Z: {round(self.telemetry_current_state.sensors["gyroscope_z"], 3)}',
+                        org=(248, 100),
+                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                        fontScale=0.8,
+                        color=terminal_green,
                         thickness=1)
-            cv2.putText(img=sensor_frame, text='Battery 2 Volts', org=(248, 175),
-                        fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green, thickness=1)
-            cv2.putText(img=sensor_frame, text=f'{round(self.telemetry_current_state.sensors["battery_2_voltage"], 3)}',
-                        org=(248, 200), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+            cv2.putText(img=sensor_frame,
+                        text='Battery 1 Volts',
+                        org=(248, 125),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN,
+                        fontScale=1.2,
+                        color=terminal_green,
                         thickness=1)
-            cv2.putText(img=sensor_frame, text='Magnetometer', org=(488, 25),
-                        fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green, thickness=1)
-            cv2.putText(img=sensor_frame, text=f'X: {round(self.telemetry_current_state.sensors["magnetometer_x"], 3)}'
-                        , org=(488, 50), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+            cv2.putText(img=sensor_frame,
+                        text=f'{round(self.telemetry_current_state.sensors["battery_1_voltage"], 3)}',
+                        org=(248, 150),
+                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                        fontScale=0.8,
+                        color=terminal_green,
                         thickness=1)
-            cv2.putText(img=sensor_frame, text=f'Y: {round(self.telemetry_current_state.sensors["magnetometer_y"], 3)}'
-                        , org=(488, 75), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+            cv2.putText(img=sensor_frame,
+                        text='Battery 2 Volts',
+                        org=(248, 175),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN,
+                        fontScale=1.2,
+                        color=terminal_green,
                         thickness=1)
-            cv2.putText(img=sensor_frame, text=f'Z: {round(self.telemetry_current_state.sensors["magnetometer_z"], 3)}'
-                        , org=(488, 100), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+            cv2.putText(img=sensor_frame,
+                        text=f'{round(self.telemetry_current_state.sensors["battery_2_voltage"], 3)}',
+                        org=(248, 200),
+                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                        fontScale=0.8,
+                        color=terminal_green,
                         thickness=1)
-            cv2.putText(img=sensor_frame, text='Pressure Transducer', org=(488, 125),
-                        fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green, thickness=1)
-            cv2.putText(img=sensor_frame, text=f'{round(self.telemetry_current_state.sensors["pressure_transducer"], 3)}',
-                        org=(488, 150), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+            cv2.putText(img=sensor_frame,
+                        text='Magnetometer',
+                        org=(488, 25),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN,
+                        fontScale=1.2,
+                        color=terminal_green,
                         thickness=1)
-            cv2.putText(img=sensor_frame, text='Roll',
-                        org=(728, 25), fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green, thickness=1)
-            cv2.putText(img=sensor_frame, text=f'{round(self.telemetry_current_state.sensors["roll"], 3)}'
-                        , org=(728, 50), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+            cv2.putText(img=sensor_frame,
+                        text=f'X: {round(self.telemetry_current_state.sensors["magnetometer_x"], 3)}',
+                        org=(488, 50),
+                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                        fontScale=0.8,
+                        color=terminal_green,
                         thickness=1)
-            cv2.putText(img=sensor_frame, text='Pitch',
-                        org=(728, 75), fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green,
+            cv2.putText(img=sensor_frame,
+                        text=f'Y: {round(self.telemetry_current_state.sensors["magnetometer_y"], 3)}',
+                        org=(488, 75),
+                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                        fontScale=0.8,
+                        color=terminal_green,
                         thickness=1)
-            cv2.putText(img=sensor_frame, text=f'{round(self.telemetry_current_state.sensors["pitch"], 3)}'
-                        , org=(728, 100), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+            cv2.putText(img=sensor_frame,
+                        text=f'Z: {round(self.telemetry_current_state.sensors["magnetometer_z"], 3)}',
+                        org=(488, 100),
+                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                        fontScale=0.8,
+                        color=terminal_green,
                         thickness=1)
-            cv2.putText(img=sensor_frame, text='Yaw',
-                        org=(728, 125), fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.2, color=terminal_green,
+            cv2.putText(img=sensor_frame,
+                        text='Pressure Transducer',
+                        org=(488, 125),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN,
+                        fontScale=1.2,
+                        color=terminal_green,
                         thickness=1)
-            cv2.putText(img=sensor_frame, text=f'{round(self.telemetry_current_state.sensors["yaw"], 3)}'
-                        , org=(728, 150), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=terminal_green,
+            cv2.putText(img=sensor_frame,
+                        text=f'{round(self.telemetry_current_state.sensors["pressure_transducer"], 3)}',
+                        org=(488, 150),
+                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                        fontScale=0.8,
+                        color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame,
+                        text='Roll',
+                        org=(728, 25),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN,
+                        fontScale=1.2,
+                        color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame,
+                        text=f'{round(self.telemetry_current_state.sensors["roll"], 3)}',
+                        org=(728, 50),
+                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                        fontScale=0.8,
+                        color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame,
+                        text='Pitch',
+                        org=(728, 75),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN,
+                        fontScale=1.2,
+                        color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame,
+                        text=f'{round(self.telemetry_current_state.sensors["pitch"], 3)}',
+                        org=(728, 100),
+                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                        fontScale=0.8,
+                        color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame,
+                        text='Yaw',
+                        org=(728, 125),
+                        fontFace=cv2.FONT_HERSHEY_PLAIN,
+                        fontScale=1.2,
+                        color=terminal_green,
+                        thickness=1)
+            cv2.putText(img=sensor_frame,
+                        text=f'{round(self.telemetry_current_state.sensors["yaw"], 3)}',
+                        org=(728, 150),
+                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                        fontScale=0.8,
+                        color=terminal_green,
                         thickness=1)
             self.telemetry_frame_counter += 1
             if self.telemetry_frame_counter % 2 == 1:
