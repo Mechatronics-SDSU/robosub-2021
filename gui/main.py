@@ -119,6 +119,7 @@ resolution = (1600, 900)  # Gui root window size
 remote_resolution = (640, 480)  # Remote camera
 gui_update_ms = 10  # Update time for gui elements in ms
 terminal_green = (74, 246, 38)
+error_red = (255, 0, 3)
 
 use_udp = False  # Do not touch UDP unless testing. Broken right now.
 
@@ -216,7 +217,7 @@ class PortConfigWrapper:
         self.port_config_labels = {
             'Command': command,
             'Video': video,
-            'Logger': logger,
+            'Logging': logger,
             'Telemetry': telemetry,
             'Pilot': pilot
         }
@@ -320,12 +321,10 @@ class Window(tk.Frame):
 
         # Info Window
         self.info_window_host_text = tk.Canvas(master=self.master, width=120, height=24, bg='green')
-        self.info_window_host_text_img = ImageTk.PhotoImage(PILImage.open('img/host_status_text.png'))
+        self.info_window_host_text_img = ImageTk.PhotoImage(PILImage.open('img/comms_status_text.png'))
         self.info_window_host_text.create_image((2, 2), anchor=tk.NW, image=self.info_window_host_text_img)
         self.info_window = tk.Frame(master=self.master, width=300, height=640, bg='white')
-        # Text
-        self.info_all_comms_text = tk.Label(master=self.info_window, text='COMMS @' + self.remote_hostname,
-                                            bd=0, bg='black', fg='white')
+
         # Config
         self.config_is_set = False
         self.cmd_config = None
@@ -392,6 +391,15 @@ class Window(tk.Frame):
                                             justify=tk.LEFT)
         self.mission_config_text_current = tk.Label(master=self.info_window, text='None', bd=0, anchor='w', bg='white',
                                                     justify=tk.LEFT)
+        # Hostname and conn status w/ opencv
+        self.hostname_img_canvas = tk.Canvas(master=self.info_window, width=250, height=360, bg='green')
+        self.hostname_img_cv = cv2.imread('img/hostname_conn_status.png')
+        self.hostname_img_cv = self.draw_hostname_conn_base(image=self.hostname_img_cv)
+        self.hostname_img = ImageTk.PhotoImage(PILImage.fromarray(self.hostname_img_cv))
+        self.hostname_img_tk = self.hostname_img_canvas.create_image((2, 2), anchor=tk.NW, image=self.hostname_img)
+        # Text
+        self.info_all_comms_text = tk.Label(master=self.info_window, text='COMMS @' + self.remote_hostname,
+                                            bd=0, bg='black', fg='white')
 
         # Telemetry Window
         self.tel_window_old = tk.Frame(master=self.master, bg='white')
@@ -538,12 +546,13 @@ class Window(tk.Frame):
         self.video_window.grid(column=3, row=2)
 
         # Info Window (Communications/Statuses)
-        self.info_window.grid(column=4, row=2, sticky=NW)
+        self.info_window.grid(column=4, row=2, sticky=NW, rowspan=3)
+        self.hostname_img_canvas.grid(column=0, row=0, sticky=W, columnspan=6)
         # Text
-        self.info_all_comms_text.grid(column=0, row=0, sticky=W, columnspan=3)
+        self.info_all_comms_text.grid(column=0, row=1, sticky=W, columnspan=3)
         # Config
-        self.config_status_button.grid(column=0, row=1, sticky=W)
-        self.config_status_text.grid(column=1, row=1, sticky=W)
+        self.config_status_button.grid(column=0, row=2, sticky=W)
+        self.config_status_text.grid(column=1, row=2, sticky=W)
         # Command GPRC
         self.cmd_status_button.grid(column=0, row=4, sticky=W)
         self.cmd_status_text.grid(column=1, row=4, sticky=W)
@@ -751,7 +760,7 @@ class Window(tk.Frame):
         port_grpc_diag = tk.Label(top)
         port_video_title = tk.Label(top, text='Video')
         port_video_diag = tk.Label(top)
-        port_logger_title = tk.Label(top, text='Logger')
+        port_logger_title = tk.Label(top, text='Logging')
         port_logger_diag = tk.Label(top)
         port_telemetry_title = tk.Label(top, text='Telemetry')
         port_telemetry_diag = tk.Label(top)
@@ -783,13 +792,13 @@ class Window(tk.Frame):
         port_grpc_button = tk.Button(master=port_grpc_diag, text='Set', command=partial(
             self.port_text_box, 'Command', self.port_command_grpc, top, pcr, self.cmd_status_port))
         port_video_button = tk.Button(master=port_video_diag, text='Set', command=partial(
-            self.port_text_box, 'Video', self.port_video_socket, top, pcr, self.cmd_status_port))
+            self.port_text_box, 'Video', self.port_video_socket, top, pcr, self.video_socket_status_port))
         port_logger_button = tk.Button(master=port_logger_diag, text='Set', command=partial(
-            self.port_text_box, 'Logger', self.port_logging_socket, top, pcr, self.cmd_status_port))
+            self.port_text_box, 'Logging', self.port_logging_socket, top, pcr, self.logging_socket_status_port))
         port_telemetry_button = tk.Button(master=port_telemetry_diag, text='Set', command=partial(
-            self.port_text_box, 'Telemetry', self.port_telemetry_socket, top, pcr, self.cmd_status_port))
+            self.port_text_box, 'Telemetry', self.port_telemetry_socket, top, pcr, self.telemetry_socket_status_port))
         port_pilot_button = tk.Button(master=port_pilot_diag, text='Set', command=partial(
-            self.port_text_box, 'Pilot', self.port_pilot_socket, top, pcr, self.cmd_status_port))
+            self.port_text_box, 'Pilot', self.port_pilot_socket, top, pcr, self.pilot_socket_status_port))
 
         port_grpc_text.grid(column=0, row=0, sticky=W)
         port_grpc_button.grid(column=1, row=0, sticky=W)
@@ -805,11 +814,11 @@ class Window(tk.Frame):
     def port_text_box(self, port_name: str, current_port: int, parent_window: any, config: PortConfigWrapper,
                       label: any) -> None:
         """Generates a text box for setting the port.
-        :param port_name:
-        :param current_port:
-        :param parent_window:
-        :param config:
-        :param label:
+        :param port_name: Dictionary reference for what port is being changed
+        :param current_port: Current port, used to display to diag box
+        :param parent_window: Top window object calling this function
+        :param config: PortConfigWrapper object that holds text box objects
+        :param label: Tkinter Label object for top window's relevant text box
         """
         prompt = simpledialog.askstring('Input', f'Set the {port_name} port here: (Currently {current_port})',
                                         parent=parent_window)
@@ -822,9 +831,19 @@ class Window(tk.Frame):
             self.ports_dict[port_name] = new_port
             self.port_command_grpc = self.ports_dict['Command']
             self.port_video_socket = self.ports_dict['Video']
-            self.port_logging_socket = self.ports_dict['Logger']
+            self.port_logging_socket = self.ports_dict['Logging']
             self.port_telemetry_socket = self.ports_dict['Telemetry']
             self.port_pilot_socket = self.ports_dict['Pilot']
+            self.cmd_status_port.configure(self.cmd_status_port,
+                                        text=f":{self.ports_dict['Command']}")
+            self.video_socket_status_port.configure(self.video_socket_status_port,
+                                        text=f":{self.ports_dict['Video']}")
+            self.logging_socket_status_port.configure(self.logging_socket_status_port,
+                                        text=f":{self.ports_dict['Logging']}")
+            self.telemetry_socket_status_port.configure(self.telemetry_socket_status_port,
+                                        text=f":{self.ports_dict['Telemetry']}")
+            self.pilot_socket_status_port.configure(self.pilot_socket_status_port,
+                                        text=f":{self.ports_dict['Pilot']}")
             # Set the called window's port
             config.port_config_labels[port_name].configure(label, text=self.ports_dict[port_name])
 
@@ -941,16 +960,46 @@ class Window(tk.Frame):
                 self.remote_logging_queue = self.remote_logging_queue[1:]
             self.text.see('end')
 
+    def draw_hostname_conn_base(self, image: any) -> any:
+        """
+        :param image: OpenCV image object
+        :return: OpenCV image objectg with drawn text
+        """
+        if self.cmd_connected:
+            cv2.putText(img=image, text=f"Connected", org=(35, 22), fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.3,
+                        color=terminal_green, thickness=1)
+            cv2.putText(img=image, text=f"@ {self.remote_hostname}", org=(10, 45), fontFace=cv2.FONT_HERSHEY_PLAIN,
+                        fontScale=1.3, color=terminal_green, thickness=1)
+        else:
+            cv2.circle(img=image, center=(15, 15), radius=8, color=error_red, thickness=1)
+            cv2.line(img=image, pt1=(24, 6), pt2=(6, 24), color=error_red, thickness=1)
+            cv2.putText(img=image, text=f"Not Connected", org=(35, 22), fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=1.3,
+                        color=error_red, thickness=1)
+        return image
+
+    def update_comms_host(self) -> None:
+        """Updates the image showing connection status
+        """
+        self.hostname_img_cv = cv2.imread('img/hostname_conn_status.png')
+        self.hostname_img_cv = self.draw_hostname_conn_base(image=self.hostname_img_cv)
+        self.hostname_img = ImageTk.PhotoImage(PILImage.fromarray(self.hostname_img_cv))
+        self.hostname_img_canvas.itemconfig(self.hostname_img_tk, image=self.hostname_img)
+
     @staticmethod
-    def update_button(button: any, enabled: bool) -> None:
+    def update_button(button: any, enabled: bool) -> bool:
         """Swaps button color if it doesn't match enabled. Called for red/green buttons.
         :param button: tkinter button object or object w/ background component
         :param enabled: boolean for switching a button's color
+        :return if it worked
         """
         if (button.config('bg')[4] == 'red') and enabled:
             button.configure(button, bg='green')
+            return True
         elif (button.config('bg')[4] == 'green') and not enabled:
             button.configure(button, bg='red')
+            return True
+        else:
+            return False
 
     @staticmethod
     def update_button_enable(button: any, enabled: bool) -> None:
@@ -1576,7 +1625,8 @@ class Window(tk.Frame):
             self.send_controller_state()  # Send current inputs
         self.update_telemetry()  # Update telemetry displayed
         # Update all button statuses
-        self.update_button(self.cmd_status_button, self.cmd_connected)
+        if self.update_button(self.cmd_status_button, self.cmd_connected):
+            self.update_comms_host()
         self.update_button(self.video_socket_connected_button, self.video_socket_is_connected)
         self.update_button(self.logging_socket_connected_button, self.logging_socket_is_connected)
         self.update_button(self.telemetry_socket_connected_button, self.telemetry_socket_is_connected)
