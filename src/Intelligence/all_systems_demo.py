@@ -18,7 +18,7 @@ from src.utils.command_configuration import CommandConfigurationPacket as cmdp
 from src.utils.logger import LoggerServer
 
 import src.utils.ip_config as ipc
-ip = ipc.load_config_from_file('ip_config.json')
+ip = ipc.IPConfig(settings=[50052, 50001, 50002, 50003, 50004])
 
 docker_client = docker.from_env()
 
