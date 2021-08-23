@@ -60,7 +60,7 @@ import PIL.Image
 import grpc
 import socket
 from datetime import datetime
-import controller_translator
+import src.utils.controller_translator as controller_translator
 import time
 import subprocess as sub
 from functools import partial
