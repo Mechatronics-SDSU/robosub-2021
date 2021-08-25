@@ -7,13 +7,11 @@ import grpc
 import multiprocessing as mp
 from multiprocessing import get_context, set_start_method
 import os
-import socket
 import logging
 import docker
 
 import src.Intelligence.cmd_grpc_server as grpc_server
 import src.utils.cmd_pb2_grpc as cmd_pb2_grpc
-import src.utils.cmd_pb2 as cmd_pb2
 from src.utils.command_configuration import CommandConfigurationPacket as cmdp
 from src.utils.logger import LoggerServer
 

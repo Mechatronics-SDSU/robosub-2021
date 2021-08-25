@@ -48,25 +48,18 @@ ________________________________________________________________________________
 
 # Python
 from __future__ import print_function
-
-import multiprocessing
 import multiprocessing as mp
 from multiprocessing import set_start_method, get_context
 import os
 import sys as system  # sys is some other import
 import math
 from collections import deque
-import PIL.Image
-import grpc
 import socket
 from datetime import datetime
-import src.utils.controller_translator as controller_translator
 import time
-import subprocess as sub
 from functools import partial
 import pickle
 import struct
-import pygame as pg
 
 # GUI
 import tkinter as tk
@@ -74,22 +67,20 @@ from tkinter import *
 from tkinter import messagebox, simpledialog
 
 # External libs
+import grpc
+import pygame as pg
 from PIL import ImageTk
 from PIL import Image as PILImage  # Image is a tkinter import
 import numpy as np
 import cv2
 
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.figure import Figure
-
 # Internal
+import src.utils.controller_translator as controller_translator
 import src.utils.cmd_pb2 as cmd_pb2
 import src.utils.cmd_pb2_grpc as cmd_pb2_grpc
 import src.utils.ip_config as ip_config
 import src.utils.logger as sub_logging
 import src.utils.telemetry as sensor_tel
-import src.utils.pilot as ctrl_pilot
-import src.utils.controller_translator
 import src.utils.command_configuration as cmd
 
 
@@ -1681,8 +1672,8 @@ class Window(tk.Frame):
         if self.pilot_socket_is_connected:
             self.send_controller_state()  # Send current inputs
         self.update_telemetry()  # Update telemetry displayed
-        self.read_pipe() # Check for pipe updates
-        self.after(gui_update_ms, self.update) # Call this function again after gui_update_ms
+        self.read_pipe()  # Check for pipe updates
+        self.after(gui_update_ms, self.update)  # Call this function again after gui_update_ms
 
 
 def gui_proc_main(gui_input: mp.Pipe, gui_output: mp.Pipe, gui_logger: LoggerWrapper, video_stream_pipe_in: mp.Pipe,
@@ -1978,7 +1969,6 @@ def pilot_proc(logger: LoggerWrapper, pilot_pipe_in: mp.Pipe, pilot_pipe_out: mp
                     server_conn = True
                     pilot_pipe_out.send(('gui', 'pilot', 'conn_socket'))
                 except ConnectionRefusedError as e:
-                    print(e)
                     pilot_pipe_out.send(('gui', 'pilot', 'no_conn_socket'))
                     rcon_try_count += 1
                     logger.log('[@PLT] ERROR: Failed to connect to remote server. '
@@ -1990,7 +1980,6 @@ def pilot_proc(logger: LoggerWrapper, pilot_pipe_in: mp.Pipe, pilot_pipe_out: mp
                     try:
                         data = s.recv(1024)
                     except (ConnectionAbortedError, ConnectionResetError) as e:
-                        print(e)
                         pilot_pipe_out.send(('gui', 'pilot', 'no_conn_socket'))
                         server_conn = False
                         break
@@ -2002,7 +1991,6 @@ def pilot_proc(logger: LoggerWrapper, pilot_pipe_in: mp.Pipe, pilot_pipe_out: mp
                             try:
                                 s.sendall(last_input)
                             except (ConnectionAbortedError, ConnectionResetError) as e:
-                                print(e)
                                 pilot_pipe_out.send(('gui', 'pilot', 'no_conn_socket'))
                                 server_conn = False
                                 break
@@ -2011,7 +1999,6 @@ def pilot_proc(logger: LoggerWrapper, pilot_pipe_in: mp.Pipe, pilot_pipe_out: mp
                             try:
                                 s.sendall(last_input)
                             except (ConnectionAbortedError, ConnectionResetError) as e:
-                                print(e)
                                 pilot_pipe_out.send(('gui', 'pilot', 'no_conn_socket'))
                                 server_conn = False
                                 break
