@@ -61,7 +61,11 @@ class CommandGRPCServicer(cmd_pb2_grpc.CommandGRPCServicer):
         # Send ack codes
             return cmd_pb2.MsgReply(ack='2')
         else:  # If we just receive a code, send acknowledge
-            return cmd_pb2.MsgReply(ack='1')
+            if request == '1':
+                return cmd_pb2.MsgReply(ack='1')
+            if (request == '2') and (self.pipe_out is not None):
+                self.pipe_out.send(('main', 'cmd_grpc', 'kill_cmd'))
+                return cmd_pb2.MsgReply(ack='3')
 
 
 def request_to_value(r):
@@ -87,6 +91,7 @@ def main():
     server.start()
     print('Started cmd grpc server.')
     server.wait_for_termination()
+
 
 """
 if __name__ == '__main__':

@@ -2,6 +2,9 @@
 """
 
 from __future__ import print_function
+
+import sys
+import time
 from concurrent import futures
 import grpc
 import multiprocessing as mp
@@ -48,6 +51,10 @@ def video_process(pipe_in_from_main, pipe_out_to_main):
             queue = mp.connection.wait([pipe_in_from_main], timeout=-1)
             if len(queue) > 0:
                 message = queue[0].recv()
+                if message[1] == 'main':
+                    if message[2] == 'modify':
+                        if message[3] == 'kill_cmd':
+                            sys.exit(1)
                 print(message)  # Can do other stuff here like modify container
 
 
@@ -75,6 +82,10 @@ def logging_process(logging_pipe, pipe_in_from_main, pipe_out_to_main):
             queue = mp.connection.wait([logging_pipe, pipe_in_from_main], timeout=-1)
             if len(queue) > 0:
                 message = queue[0].recv()
+                if message[1] == 'main':
+                    if message[2] == 'modify':
+                        if message[3] == 'kill_cmd':
+                            sys.exit(1)
                 print(message)  # Can do other stuff here like modify container
 
 
@@ -102,6 +113,10 @@ def telemetry_process(pipe_in_from_main, pipe_out_to_main):
             queue = mp.connection.wait([pipe_in_from_main], timeout=-1)
             if len(queue) > 0:
                 message = queue[0].recv()
+                if message[1] == 'main':
+                    if message[2] == 'modify':
+                        if message[3] == 'kill_cmd':
+                            sys.exit(1)
                 print(message)  # Can do other stuff here like modify container
 
 
@@ -129,6 +144,10 @@ def pilot_process(pipe_in_from_main, pipe_out_to_main):
             queue = mp.connection.wait([pipe_in_from_main], timeout=-1)
             if len(queue) > 0:
                 message = queue[0].recv()
+                if message[1] == 'main':
+                    if message[2] == 'modify':
+                        if message[3] == 'kill_cmd':
+                            sys.exit(1)
                 print(message)  # Can do other stuff here like modify container
 
 
@@ -202,6 +221,18 @@ def main():
             elif message[1] == 'cmd_grpc':
                 if isinstance(message[2], cmdp):  # Got a command config sent to main. GUI wants to enable sockets.
                     recv_cmd = message[2]
+                elif message[2] == 'kill_cmd':  # Recieved kill command, kill all containers and exit
+                    print('killing video')
+                    main_pipe_to_video.send(('video', 'main', 'modify', 'kill_cmd'))
+                    print('killing logging')
+                    main_pipe_to_logging.send(('logging', 'main', 'modify', 'kill_cmd'))
+                    print('killing telemetry')
+                    main_pipe_to_telemetry.send(('telemetry', 'main', 'modify', 'kill_cmd'))
+                    print('killing pilot')
+                    main_pipe_to_pilot.send(('pilot', 'main', 'modify', 'kill_cmd'))
+                    time.sleep(0.5)
+                    print('killing system')
+                    sys.exit(1)
         # If we have a command config then send messages to relevant sockets to enable
         if isinstance(recv_cmd, cmdp):
             # Logging

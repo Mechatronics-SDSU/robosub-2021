@@ -231,6 +231,8 @@ class CMDGrpcClient:
         """
         if (request == 1) or (request == '1'):
             self.logger.log('[GRPC] Sending socket startup request to server...')
+        elif (request == 2) or (request == '2'):
+            self.logger.log('[GRPC] Sent kill signal to Pico...')
         try:
             response = self._stub.SendCommandRequest(cmd_pb2.MsgRequest(req=(str(request))))
             response = request_to_value(str(response))
@@ -285,7 +287,6 @@ class Window(tk.Frame):
             'Telemetry': 0,
             'Pilot': 0
         }
-
         self.port_command_grpc = self.ports_dict['Command']
         self.port_video_socket = self.ports_dict['Video']
         self.port_logging_socket = self.ports_dict['Logging']
@@ -349,6 +350,8 @@ class Window(tk.Frame):
         self.info_window_pico_text = tk.Canvas(master=self.info_window, width=120, height=24, bg='green')
         self.info_window_pico_text_img = ImageTk.PhotoImage(PILImage.open('img/pico_status_text.png'))
         self.info_window_pico_text.create_image((2, 2), anchor=tk.NW, image=self.info_window_pico_text_img)
+        self.pico_kill_button = tk.Button(master=self.info_window, text='KILL PICO', command=partial(
+                        self.kill_pico_grpc))
 
         # Config
         self.config_is_set = False
@@ -484,6 +487,9 @@ class Window(tk.Frame):
         # Logger
         self.logger = LoggerWrapper()
 
+        # GRPC Client
+        self.client = None
+
         # Build and arrange windows
         self.init_window()
         self.update()
@@ -546,6 +552,7 @@ class Window(tk.Frame):
         self.hostname_img_canvas.grid(column=0, row=0, sticky=W, columnspan=6)
         self.host_img_canvas.grid(column=0, row=2, sticky=W, columnspan=6)
         self.pico_img_canvas.grid(column=0, row=4, sticky=W, columnspan=6)
+        self.pico_kill_button.grid(column=0, row=5, sticky=N, columnspan=6)
         # Text
         self.info_window_host_text.grid(column=0, row=1, sticky=W, columnspan=3)
         self.info_window_pico_text.grid(column=0, row=3, sticky=W, columnspan=3)
@@ -839,10 +846,11 @@ class Window(tk.Frame):
         """Attempts to send a GRPC command packet to the SUB.
         """
         # Start up a GRPC client
-        client = CMDGrpcClient(hostname=self.remote_hostname,
-                            port=self.port_command_grpc,
-                            logger=self.logger)
-        response = client.send(1)
+        if self.client is None:
+            self.client = CMDGrpcClient(hostname=self.remote_hostname,
+                                        port=self.port_command_grpc,
+                                        logger=self.logger)
+        response = self.client.send(1)
         if response == '!':
             self.diag_box('Error communicating with server. (Is it on?)')
         elif response == '1':  # Got acknowledge to set the config, send config
@@ -853,7 +861,7 @@ class Window(tk.Frame):
                 # Send Packet with command
                 print('Sending config...')
                 request = pickle.dumps(self.cmd_config).hex()
-                client.send(request)
+                self.client.send(request)
             else:
                 self.diag_box('Error, config not set')
 
@@ -1016,6 +1024,15 @@ class Window(tk.Frame):
         self.host_img_cv = self.draw_host_status_base(image=self.host_img_cv)
         self.host_img = ImageTk.PhotoImage(PILImage.fromarray(self.host_img_cv))
         self.host_img_canvas.itemconfig(self.host_img_tk, image=self.host_img)
+
+    def kill_pico_grpc(self) -> None:
+        """Sends kill command to CMD pipe.
+        """
+        if self.client is not None:
+            response = self.client.send(2)
+            if response == '!':
+                self.diag_box('Error communicating with server. (Is it on?)')
+            print('kill_pico grpc')
 
     @staticmethod
     def update_button(button: any, enabled: bool) -> bool:
