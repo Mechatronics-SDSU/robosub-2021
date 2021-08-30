@@ -21,6 +21,8 @@ import struct
 
 import socket_route_guide_pb2
 import socket_route_guide_pb2_grpc
+import src.utils.ip_config as ipc
+ip = ipc.load_config_from_file('src/utils/ip_config.json')
 
 
 class SocketConnection:
@@ -29,7 +31,7 @@ class SocketConnection:
     def __init__(self):
         print('Initialized')
         self.host = ''
-        self.port = 50001
+        self.port = ip.video_port
         self.started = False
         self.use_udp = False
         if self.use_udp:
@@ -48,13 +50,13 @@ class SocketConnection:
         """Runs the TCP socket server
         """
         print('Started Thread')
-        vs = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        vs = cv2.VideoCapture(0, cv2.CAP_V4L2)
         vs.set(3, 640)
         vs.set(4, 480)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind((self.host, self.port))
-            s.listen(5)
+            s.listen()
             conn, address = s.accept()
             print('Received connection from address: ' + str(address))
             while self.started:
@@ -153,6 +155,7 @@ def request_to_value(r):
 def main():
     """Driver Code for grpc server
     """
+    """
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     socket_route_guide_pb2_grpc.add_SocketGRPCServicer_to_server(StartSocket(), server)
     server.add_insecure_port('[::]:50051')
@@ -161,6 +164,9 @@ def main():
     print('[@SCKS] Socket server started.')
     server.wait_for_termination()
     print('[@SCKS] Server\'s closed.')
+    """
+    sc = SocketConnection()
+    sc.start()
 
 
 if __name__ == '__main__':

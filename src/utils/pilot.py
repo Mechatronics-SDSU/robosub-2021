@@ -1,8 +1,5 @@
-"""Implements a client for receiving pilot control input on the SUB.
-
-Pilot client accepts a socket connection and receives controller input from HOST.
-This is encapsulated in a Controller object for convenient method access with
-options for configurations.
+"""Pilot_client class moved to here.
+Sets the config of the joystick.
 
 Developed and tested with Ian's Xbox One Controller but other configuations can
 be added at a later time.
@@ -95,38 +92,3 @@ class Controller:
     def __str__(self):
         return str(self.name) + \
                ' Controller object. '
-
-
-def run_client():
-    """Client's driver code
-    """
-    # Controller
-    controls = Controller(name='XBONE')
-    # Socket
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.connect((server_name, port))
-        while started:
-            s.sendall(b'1')
-            data = s.recv(4096)
-            controls.set_state(np.frombuffer(data, dtype=float))
-            '''Here we can do whatever we want with this numpy array.
-            Here it is printed but it can be used for maestro control.
-            '''
-            print(str(controls.get_state()))
-
-
-def main(start=False):
-    """Control code to start and stop the server
-    """
-    while True:
-        if not start:
-            pass
-        else:
-            run_client()
-
-
-if __name__ == '__main__':
-    main(start=True)
-else:
-    sys.exit()

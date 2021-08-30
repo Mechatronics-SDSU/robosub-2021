@@ -59,15 +59,15 @@ class CommandConfiguration:
         self._DEFAULT_LOGGING_CODE_MAX = 2
         self._DEFAULT_VIDEO_CODE = 0
         self._DEFAULT_VIDEO_CODE_MAX = 1
-        self._DEFAULT_TELEMETRY_CODE = 0
-        self._DEFAULT_TELEMETRY_CODE_MAX = 2
+        self._DEFAULT_TELEMETRY_CODE = 1
+        self._DEFAULT_TELEMETRY_CODE_MAX = 1
         self._DEFAULT_SOCK_CODES = (self._DEFAULT_LOGGING_CODE,
                                     self._DEFAULT_VIDEO_CODE,
                                     self._DEFAULT_TELEMETRY_CODE)
         self._DEFAULT_SOCK_CODES_MAX = (self._DEFAULT_LOGGING_CODE_MAX,
                                         self._DEFAULT_VIDEO_CODE_MAX,
                                         self._DEFAULT_TELEMETRY_CODE_MAX)
-        self._DEFAULT_PILOT_CONTROL = True
+        self._DEFAULT_PILOT_CONTROL = False
         self._VALID_MISSIONS = ('no', 'all', 'gate', 'buoy', 'rise')
         self._DEFAULT_MISSION = 'no'
 
@@ -115,7 +115,7 @@ class CommandConfiguration:
         """
         return 'Command Configuration object ' + \
                ' Socket codes:' + str(self.socket_codes) + \
-               ' Pilot control: ' + str(self.pilot_control) + \
+               ' Pilot_Testing control: ' + str(self.pilot_control) + \
                ' Mission selected: ' + str(self.mission)
 
 

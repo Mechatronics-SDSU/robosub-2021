@@ -6,11 +6,11 @@ The commented out code in run_server describes how loading data would look, give
 
 import numpy as np
 import socket
+import datetime
 
-from telemetry import Telemetry
-
-SERVER_HOSTNAME = ''
-SERVER_PORT = 50004
+from src.utils.telemetry import Telemetry
+import src.utils.ip_config as ipc
+ip = ipc.load_config_from_file('src/utils/ip_config.json')
 
 
 def run_server():
@@ -28,14 +28,14 @@ def run_server():
     # Socket connection
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind((SERVER_HOSTNAME, SERVER_PORT))
+        s.bind(('', ip.telemetry_port))
         s.listen()
         conn, address = s.accept()
+        print('Listening...')
         while True:
             result = conn.recvfrom(1024)[0]
-            print(result)
             if result == b'1':  # Data request
-                data = Telemetry(rand_data=True)  # Testing only, replace with actual sensors
+                data = Telemetry(rand_data=True, timestamp=True)  # Testing only, replace with actual sensors
                 conn.sendall(data.to_bytes())
 
 
