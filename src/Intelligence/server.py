@@ -19,12 +19,10 @@ import subprocess
 from src.inference_dir.gate_detector import GateDetector
 
 
-HOST = "0.0.0.0"
+HOST = "localhost"
 PORT = 65432
 
 gate_detector = GateDetector()
-
-cap = cv2.VideoCapture('src/files/Additional_Test_Video.mp4')
 
 class Listener(buffer_pb2_grpc.Response_ServiceServicer):
     def __init__(self):
@@ -37,7 +35,7 @@ class Listener(buffer_pb2_grpc.Response_ServiceServicer):
         print("Retrieved")
         decode = retriever.decode("utf-8")
         if  decode == "start":
-            self.p = Process(target=process, args=(cap,))
+            self.p = Process(target=process, args=())
             self.p.start()
             return buffer_pb2.Request_Response(message = bytes('ok', 'utf-8'))
         if request.send == "stop":
@@ -45,11 +43,12 @@ class Listener(buffer_pb2_grpc.Response_ServiceServicer):
             return buffer_pb2.Request_Response(message = bytes('ok', 'utf-8'))
 
 
-def process(cap,):
+def process():
+    cap = cv2.VideoCapture('src/files/Additional_Test_Video.mp4')
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.connect((HOST,PORT))
-        #print("Socket Connected")
+        s.connect((HOST, PORT))
+        # print("Socket Connected")
         cap = cv2.VideoCapture('src/files/Additional_Test_Video.mp4')
         while True:
             print("Inside While true")

@@ -1,6 +1,6 @@
 import cv2
 import math
-from utils.debug import (draw_lines,
+from src.utils.debug import (draw_lines,
                          draw_detected_tracking_boxes,
                          print_tracking_box_class)
 
