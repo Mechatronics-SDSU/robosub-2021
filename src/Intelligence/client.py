@@ -1,32 +1,27 @@
-from multiprocessing import Process
-import os
-import buffer_pb2
-import buffer_pb2_grpc
-import time
+"""TODO: Add a docstring!
+"""
 import grpc
 import logging
-import cv2
-import pickle
 import socket
-import subprocess
 
-from src.inference_dir.gate_detector import GateDetector
-
-
+from src.utils import buffer_pb2, buffer_pb2_grpc
 
 HOST = "0.0.0.0"
 PORT = 65432
-
-
 CLIENT_ID = 1
-start = False
+STARTED = False
 
-class Spawn():
+
+class Spawn:
+	"""TODO: Add a docstring!
+	"""
 	def __init__(self):	
 		self.run()
-		
-		
-	def run(self):
+
+	@staticmethod
+	def run():
+		"""TODO: Add a docstring!
+		"""
 		channel = grpc.insecure_channel('localhost:50051')
 		stub = buffer_pb2_grpc.Response_ServiceStub(channel)
 		response_string = b"start"
@@ -37,21 +32,25 @@ class Spawn():
 				
 
 def term_socket():
+	"""TODO: Add a docstring!
+	"""
 	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 		s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		s.bind((HOST, PORT))
 		s.listen(5)
 		conn, addr = s.accept()
-		while True:
+		while STARTED:
 			data = conn.recvfrom(1024)[0]
 			print(data)
 		conn.close()
 			
 			
 def stop():
-	server.check(p, "stop")
-				
-   
+	"""TODO: Add a docstring!
+	"""
+	server.check(p, "stop")  # Why is this here? -IAR
+
+
 if __name__ == '__main__':
 	logging.basicConfig()
 	Spawn()

@@ -1,9 +1,18 @@
+"""TODO: Add a docstring!
+IDK wtf this is Jimmy but it's getting renamed to new_state_machine for now -IAR
+"""
+
 import docker
-CLIENT = docker.from_env()
-import sys,time
+
 import client
 
+
+CLIENT = docker.from_env()
+
+
 def DestroyAllContainers():
+    """TODO: Add a docstring!
+    """
     containers_list = CLIENT.containers.list(all=True)
     for cont in containers_list:
         cont.remove(force=True)
@@ -32,15 +41,19 @@ class SimpleDevice(object):
         self.state = self.state.on_event(event)
 
     def tasks(self, task):
+        """TODO: Add a docstring!
+        """
         # Delegate Tasks based on state
         self.state = self.state.tasks(task)
 
 
 def Interpret():
-	info = client.response.message
-	print("hello")
-	print (info)
-	
+    """TODO: Add a docstring!
+        """
+    info = client.response.message
+    print("hello")
+    print(info)
+
 
 class State(object):
     """
@@ -77,6 +90,8 @@ class State(object):
 
 
 class LockedState(State):
+    """TODO: Add a docstring!
+    """
     def __init__(self):
         """ Initialize the components. """
         containers_list = CLIENT.containers.list(all=True)
@@ -91,6 +106,8 @@ class LockedState(State):
     """
 
     def tasks(self):
+        """TODO: Add a docstring!
+        """
         print("Deleting all Docker Containers...")
         if not self.container:
             CLIENT.containers.run(name="minisub", command=None, image="ubuntu", detach=True)
@@ -105,6 +122,8 @@ class LockedState(State):
         print("All Docker containers Deleted")
 
     def on_event(self, event):
+        """TODO: Add a docstring!
+        """
         if event == 'Normal_Operation':
             return UnlockedState()
         if event == 'Caution_Operation':
@@ -114,6 +133,8 @@ class LockedState(State):
 
 
 class UnlockedState(State):
+    """TODO: Add a docstring!
+    """
     def __init__(self):
         """ Initialize the components. """
         containers_list = CLIENT.containers.list(all=True)
@@ -124,6 +145,8 @@ class UnlockedState(State):
         self.tasks()
 
     def tasks(self):
+        """TODO: Add a docstring!
+        """
         print("Building {} Container".format(self))
         if not self.container:
             CLIENT.containers.run(name="minisub", command=None, image="ubuntu", detach=True)
@@ -136,6 +159,8 @@ class UnlockedState(State):
     """
 
     def on_event(self, event):
+        """TODO: Add a docstring!
+        """
         if event == 'Error_Operation':
             return LockedState()
         if event == 'Caution_Operation':
@@ -144,6 +169,8 @@ class UnlockedState(State):
 
 
 class CautionState(State):
+    """TODO: Add a docstring!
+    """
     def __init__(self):
         """ Initialize the components. """
         containers_list = CLIENT.containers.list(all=True)
@@ -154,6 +181,8 @@ class CautionState(State):
         self.tasks()
 
     def tasks(self):
+        """TODO: Add a docstring!
+        """
         containers_list = CLIENT.containers.list(all=True)
         for cont in containers_list:
             cont.remove(force=True)
@@ -170,6 +199,8 @@ class CautionState(State):
     """
 
     def on_event(self, event):
+        """TODO: Add a docstring!
+        """
         if event == "Error_Operation":
             return LockedState()
         if event == 'Normal_Operation':
@@ -178,7 +209,5 @@ class CautionState(State):
 
 
 if __name__ == '__main__':
-	Interpret()
+    Interpret()
 # End of our states.
-
-

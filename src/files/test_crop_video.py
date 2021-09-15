@@ -13,7 +13,7 @@ while True:
     ret, frame = cap.read()
     # (height, width) = frame.shape[:2]
     sky = frame[115:581, 18:644]
-    #cv2.imshow('Video', sky)
+    # cv2.imshow('Video', sky)
     print(f" [Writing Image ... {count:04d} ", end='\r')
     cv2.imwrite(f"build/test_capture_{count:05d}.png", sky)
 

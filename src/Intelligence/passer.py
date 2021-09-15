@@ -1,6 +1,5 @@
 import cv2
 from inference_dir.gate_detector import GateDetector
-import buffer_pb2 as buffer
 import pickle
 
 gate_detector = GateDetector()

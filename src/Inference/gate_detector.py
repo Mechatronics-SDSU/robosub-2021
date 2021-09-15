@@ -268,11 +268,14 @@ class GateDetector:
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         # Create default Fast Line Detector (FSD)
+        # fld = cv2.ximgproc.createFastLineDetector(gray_frame)
+
         fld = cv2.ximgproc.createFastLineDetector(_length_threshold=70,
                                                   _canny_th1=5,
                                                   _canny_th2=5,
                                                   _canny_aperture_size=3,
                                                   _do_merge=True)
+
 
         # Detect lines in the image
         lines = fld.detect(gray_frame)
