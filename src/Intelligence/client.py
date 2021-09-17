@@ -22,7 +22,7 @@ class Spawn:
 	def run():
 		"""TODO: Add a docstring!
 		"""
-		channel = grpc.insecure_channel('localhost:50051')
+		channel = grpc.insecure_channel('0.0.0.0:50051')
 		stub = buffer_pb2_grpc.Response_ServiceStub(channel)
 		response_string = b"start"
 		print("Start Command")
