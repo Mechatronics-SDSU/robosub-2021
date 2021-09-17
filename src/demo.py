@@ -1,4 +1,4 @@
-from inference_dir.inference import Inference
+from Inference.inference import Inference
 
 
 video = 'files/gate_mission1.mp4'

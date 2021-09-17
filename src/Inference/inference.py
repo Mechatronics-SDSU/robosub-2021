@@ -3,9 +3,9 @@ import time
 from threading import Thread
 import asyncio
 from utils.video_stream import VideoStream
-from inference_dir.optical_flow import OpticalFlow
-from inference_dir.object_detector import ObjectDetector
-from inference_dir.gate_detector import GateDetector
+from Inference.optical_flow import OpticalFlow
+from Inference.object_detector import ObjectDetector
+from Inference.gate_detector import GateDetector
 
 from utils.consants import WIN_WIDTH, WIN_HEIGHT, GREEN
 from utils.utils import (point_to_rectangle, rectangle_to_point, draw_point, draw_detected_object,

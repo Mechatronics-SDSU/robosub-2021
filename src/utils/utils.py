@@ -1,3 +1,5 @@
+"""TODO: Add a docstring!
+"""
 import cv2
 import numpy as np
 import math
@@ -6,6 +8,8 @@ from utils.consants import (RADIUS, RED, BLACK, WHITE, BLUE)
 
 
 class DetectedObject:
+    """TODO: Add a docstring!
+    """
     def __init__(self, object_id, box, score=None):
         self.id = [object_id]  # post, two-posts, left-corner, right-corner, full-gate, buoy1, buoy2,
         self.box = box
@@ -21,16 +25,22 @@ class DetectedObject:
 
 
 class FPS:
+    """TODO: Add a docstring!
+    """
     def __init__(self):
         self._start = None
         self._end = None
         self._numFrames = 0
 
     def start(self):
+        """TODO: Add a docstring!
+        """
         self._start = datetime.datetime.now()
         return self
 
     def stop(self):
+        """TODO: Add a docstring!
+        """
         self._end = datetime.datetime.now()
 
     def update(self):
@@ -51,7 +61,10 @@ class FPS:
         """
         return self._numFrames / self.elapsed()
 
+    @staticmethod
     def display_fps(self, frame, fps):
+        """TODO: Add a docstring!
+        """
         cv2.putText(frame, f'FPS: {round(fps, 2)}', (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, BLUE, 2, cv2.LINE_AA)
 
 

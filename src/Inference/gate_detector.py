@@ -1,3 +1,5 @@
+"""TODO: Add a docstring!
+"""
 import cv2
 from utils.utils import (draw_lines, distance_between_points, DetectedObject)
 from utils.consants import (BLUE, GREEN, YELLOW, MIN_VERT_LINE_DIFF, MIN_CORNER_DISTANCE, MIN_SLOPE,
@@ -5,8 +7,10 @@ from utils.consants import (BLUE, GREEN, YELLOW, MIN_VERT_LINE_DIFF, MIN_CORNER_
 
 
 class GateDetector:
-
-    def separate_lines(self, lines):
+    """TODO: Add a docstring!
+    """
+    @staticmethod
+    def separate_lines(lines):
         """
         :param lines: A 2D array of lines of the format [x1, y1, x2, y2]
         :return: Two new 2D arrays with vertical and horizontal lines separated respectively
@@ -30,9 +34,9 @@ class GateDetector:
                     horizontal.append([x1, y1, x2, y2])
         return vertical, horizontal
 
-    def find_both_posts(self, vertical):
+    @staticmethod
+    def find_both_posts(vertical):
         """
-
         :param vertical: 2D array of only vertical lines
         :return: The two most horizontally aligned vertical lines if found, else None
         """
@@ -56,9 +60,8 @@ class GateDetector:
 
         return [line1, line2] if min_diff < MIN_VERT_LINE_DIFF else None
 
-
-
-    def find_corner_lines(self, vertical_lines, horizontal_lines, hor_x_idx, hor_y_idx):
+    @staticmethod
+    def find_corner_lines(vertical_lines, horizontal_lines, hor_x_idx, hor_y_idx):
         """
         Finds the best candidate lines that form a corner by comparing the distance between their closes points
         :param vertical_lines: 2D array of vertical lines

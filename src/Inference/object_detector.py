@@ -15,7 +15,7 @@ input_std = 127.5
 
 class ObjectDetector:
     def __init__(self, model_name, frame_size):
-        self.interpreter = Interpreter(model_path=os.path.join(CWD_PATH, 'inference_dir', model_name, GRAPH_NAME))
+        self.interpreter = Interpreter(model_path=os.path.join(CWD_PATH, 'Inference', model_name, GRAPH_NAME))
         self.interpreter.allocate_tensors()
         self.setup_model()
         self.labels = self.load_label_map(model_name)
@@ -26,7 +26,7 @@ class ObjectDetector:
         :param model_name: Name of the directory where the model files are stored
         :return: A list of all the object the model can detect
         """
-        PATH_TO_LABELS = os.path.join(CWD_PATH, 'inference_dir', model_name, LABELMAP_NAME)
+        PATH_TO_LABELS = os.path.join(CWD_PATH, 'Inference', model_name, LABELMAP_NAME)
         with open(PATH_TO_LABELS, 'r') as f:
             labels = [line.strip() for line in f.readlines()]
 

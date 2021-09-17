@@ -1,8 +1,14 @@
+"""TODO: Add a docstring!
+"""
 import cv2
 from threading import Thread
 
+
 class VideoStream:
+    """TODO: Add a docstring!
+    """
     def __init__(self, resolution=(640, 480), framerate=30, input_stream=1):
+        self.framerate = framerate
         self.stream = cv2.VideoCapture(input_stream)
         self.treading = True if input_stream == 1 else False
         self.stream.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
@@ -21,7 +27,7 @@ class VideoStream:
         """
         width = self.stream.get(cv2.CAP_PROP_FRAME_WIDTH)
         height = self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        return (width, height)
+        return width, height
 
     def start(self):
         """
@@ -52,4 +58,6 @@ class VideoStream:
             return frame
 
     def stop(self):
+        """Mutator
+        """
         self.stopped = True
