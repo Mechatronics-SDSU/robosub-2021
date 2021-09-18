@@ -29,6 +29,14 @@ class Node:
             self.leaves.appendleft(node)
 
 
+def get_path(node: Node) -> str:
+    """Builds a path string to a node recursively."""
+    if node.parent is not None:
+        return f"{get_path(node.parent)} > {node.name}"
+    else:
+        return f"{node.name}"
+
+
 class Tree:
     """Tree abstraction for our mission tree
     """
@@ -83,20 +91,33 @@ def run_test_mission():
     ms = MissionSystem(base_mission_name='test_mission')
     # Build all nodes
     green_box = Node(node_name='green_box', parent=ms.tree.root)
+    print(f"Mission green_box: {get_path(green_box)}")
     red_box = Node(node_name='red_box', parent=ms.tree.root)
+    print(f"Mission red_box: {get_path(red_box)}")
     blue_box = Node(node_name='blue_box', parent=ms.tree.root)
+    print(f"Mission blue_box: {get_path(blue_box)}")
     locate_box_green = Node(node_name='locate_box', parent=green_box)
+    print(f"Mission locate_box_green: {get_path(locate_box_green)}")
     turning_left_90 = Node(node_name='turning_left_90', parent=locate_box_green)
+    print(f"Mission turning_left_90: {get_path(turning_left_90)}")
     drive_motor = Node(node_name='drive_motor', parent=turning_left_90)
+    print(f"Mission drive_motor: {get_path(drive_motor)}")
     validate_angle = Node(node_name='validate_angle', parent=turning_left_90)
+    print(f"Mission validate_angle: {get_path(validate_angle)}")
     turning_right_90 = Node(node_name='turning_right_90', parent=locate_box_green)
+    print(f"Mission turning_right_90: {get_path(turning_right_90)}")
     drive_motor = Node(node_name='drive_motor', parent=turning_right_90)
+    print(f"Mission drive_motor: {get_path(drive_motor)}")
     validate_angle = Node(node_name='validate_angle', parent=turning_right_90)
+    print(f"Mission validate_angle: {get_path(validate_angle)}")
     align = Node(node_name='align', parent=locate_box_green)
+    print(f"Mission align: {get_path(align)}")
     strafing_left = Node(node_name='strafing_left', parent=align)
+    print(f"Mission strafing_left: {get_path(strafing_left)}")
     strafing_right = Node(node_name='strafing_right', parent=align)
+    print(f"Mission strafing_right: {get_path(strafing_right)}")
     est_target_lock = Node(node_name='est_target_lock', parent=green_box)
-    print(ms)
+    print(f"Mission est_target_lock: {get_path(est_target_lock)}\n")
     print(ms.tree)
 
 
