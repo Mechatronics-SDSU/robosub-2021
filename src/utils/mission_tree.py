@@ -1,4 +1,4 @@
-"""An abstraction of Pico's mission system as a class with related methods.
+"""An abstraction of a mission system as a class with related methods and classes.
 Written by Ian Reichard
 """
 
@@ -27,6 +27,9 @@ class Node:
         """Mutator"""
         if node not in list(self.leaves):
             self.leaves.appendleft(node)
+
+    def __str__(self) -> str:
+        return f"Node Object with path: {get_path(self)}"
 
 
 def get_path(node: Node) -> str:
@@ -61,7 +64,7 @@ class Tree:
             return dfs_string
 
     def __str__(self) -> str:
-        dfs_string = f"Tree object with root {self.root.__str__()}\n"
+        dfs_string = f"Tree object with root node: {self.root.__str__()}\n"
         dfs_string += self.dfs(parent=self.root)
         return dfs_string
 
