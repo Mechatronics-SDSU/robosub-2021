@@ -14,15 +14,15 @@ def build_gate_mission(gate_node: mission_sys.Node) -> None:
     """
     submerge = mission_sys.Node(node_name='submerge', parent=gate_node)
     engage_down_thrusters = mission_sys.Node(node_name='engage_down_thrusters', parent=submerge)
-    locate_gate = mission_sys.Node(node_name='locate_gate', parent=gate_node)
-    radial_search = mission_sys.Node(node_name='radial_search', parent=locate_gate)
+    locate = mission_sys.Node(node_name='locate', parent=gate_node)
+    radial_search = mission_sys.Node(node_name='radial_search', parent=locate)
     turn_port_step = mission_sys.Node(node_name='turn_port_step', parent=radial_search)
     video_analysis = mission_sys.Node(node_name='video_analysis', parent=radial_search)
-    linear_search = mission_sys.Node(node_name='linear_search', parent=locate_gate)
+    linear_search = mission_sys.Node(node_name='linear_search', parent=locate)
     forward_step = mission_sys.Node(node_name='forward_step', parent=linear_search)
     video_analysis = mission_sys.Node(node_name='video_analysis', parent=linear_search)
-    gate_alignment = mission_sys.Node(node_name='gate_alignment', parent=gate_node)
-    approach = mission_sys.Node(node_name='approach', parent=gate_alignment)
+    perform_alignment = mission_sys.Node(node_name='perform_alignment', parent=gate_node)
+    approach = mission_sys.Node(node_name='approach', parent=perform_alignment)
     move_step = mission_sys.Node(node_name='move_step', parent=approach)
     turn_step = mission_sys.Node(node_name='turn_step', parent=approach)
     video_analysis = mission_sys.Node(node_name='video_analysis', parent=approach)
@@ -34,14 +34,43 @@ def build_buoy_mission(buoy_node: mission_sys.Node) -> None:
     """Given the root node of the buoy mission, build out the mission step by step.
     :param buoy_node: Node for the parent buoy mission.
     """
-    pass
+    locate = mission_sys.Node(node_name='locate', parent=buoy_node)
+    radial_search = mission_sys.Node(node_name='radial_search', parent=locate)
+    turn_port_step = mission_sys.Node(node_name='turn_port_step', parent=radial_search)
+    video_analysis = mission_sys.Node(node_name='video_analysis', parent=radial_search)
+    linear_search = mission_sys.Node(node_name='linear_search', parent=locate)
+    forward_step = mission_sys.Node(node_name='forward_step', parent=linear_search)
+    video_analysis = mission_sys.Node(node_name='video_analysis', parent=linear_search)
+    contact = mission_sys.Node(node_name='contact', parent=buoy_node)
+    perform_alignment = mission_sys.Node(node_name='perform_alignment', parent=contact)
+    move_step = mission_sys.Node(node_name='move_step', parent=perform_alignment)
+    turn_step = mission_sys.Node(node_name='turn_step', parent=perform_alignment)
+    video_analysis = mission_sys.Node(node_name='video_analysis', parent=perform_alignment)
+    bump = mission_sys.Node(node_name='bump', parent=contact)
+    engage_forward_thrusters = mission_sys.Node(node_name='engage_forward_thrusters', parent=bump)
+    circle_perimeter = mission_sys.Node(node_name='circle_perimeter', parent=buoy_node)
+    perform_alignment = mission_sys.Node(node_name='perform_alignment', parent=circle_perimeter)
+    engage_aft_thrusters = mission_sys.Node(node_name='engage_aft_thrusters', parent=perform_alignment)
+    move_step = mission_sys.Node(node_name='move_step', parent=perform_alignment)
+    turn_step = mission_sys.Node(node_name='turn_step', parent=perform_alignment)
+    circle_step = mission_sys.Node(node_name='circle_step', parent=circle_perimeter)
 
 
 def build_rise_mission(rise_node: mission_sys.Node) -> None:
     """Given the root node of the rise mission, build out the mission step by step.
     :param rise_node: Node for the parent rise mission.
     """
-    pass
+    locate = mission_sys.Node(node_name='locate', parent=rise_node)
+    radial_search = mission_sys.Node(node_name='radial_search', parent=locate)
+    turn_port_step = mission_sys.Node(node_name='turn_port_step', parent=radial_search)
+    video_analysis = mission_sys.Node(node_name='video_analysis', parent=radial_search)
+    linear_search = mission_sys.Node(node_name='linear_search', parent=locate)
+    forward_step = mission_sys.Node(node_name='forward_step', parent=linear_search)
+    video_analysis = mission_sys.Node(node_name='video_analysis', parent=linear_search)
+    perform_alignment = mission_sys.Node(node_name='perform_alignment', parent=rise_node)
+    move_step = mission_sys.Node(node_name='move_step', parent=perform_alignment)
+    turn_step = mission_sys.Node(node_name='turn_step', parent=perform_alignment)
+    engage_up_thrusters = mission_sys.Node(node_name='engage_up_thrusters', parent=rise_node)
 
 
 def build_tree(missions: tuple) -> mission_sys.MissionSystem:
