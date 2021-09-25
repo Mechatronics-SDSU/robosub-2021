@@ -3,7 +3,7 @@ import numpy as np
 
 
 class OpticalFlow:
-    def __init__(self, first_frame):
+    def __init__(self, first_frame: list) -> None:
         self.first_frame = first_frame
         self.lk_params = dict(winSize=(25, 25),
                               maxLevel=4,
@@ -15,10 +15,10 @@ class OpticalFlow:
         self.new_points = [[0, 0]]
 
 
-    def get_new_points(self, points, old_points):
+    def get_new_points(self, points: tuple, old_points: tuple) -> None:
         self.current_point, self.old_points = points, old_points
 
-    def update_point(self, gray_frame):
+    def update_point(self, gray_frame: list) -> tuple:
         """
         :param gray_frame: Gray scale frame
         :return: Updated (x, y) coordinates of the tracking point

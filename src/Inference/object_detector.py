@@ -7,26 +7,26 @@ from utils.consants import (GRAPH_NAME, LABELMAP_NAME, MIN_CONF_THRESHOLD)
 
 importlib.util.find_spec('tflite_runtime')  # Import TensorFlow libraries
 
-CWD_PATH = os.getcwd() # Get path to current working directory
+CWD_PATH = os.getcwd()  # Get path to current working directory
 
 input_mean = 127.5
 input_std = 127.5
 
 
 class ObjectDetector:
-    def __init__(self, model_name, frame_size):
-        self.interpreter = Interpreter(model_path=os.path.join(CWD_PATH, 'Inference', model_name, GRAPH_NAME))
+    def __init__(self, model_name: str, frame_size: tuple):
+        self.interpreter = Interpreter(model_path=os.path.join(CWD_PATH, 'Inference/models', model_name, GRAPH_NAME))
         self.interpreter.allocate_tensors()
         self.setup_model()
         self.labels = self.load_label_map(model_name)
         self.frame_width, self.frame_height = frame_size
 
-    def load_label_map(self, model_name):
+    def load_label_map(self, model_name: str) -> list:
         """
-        :param model_name: Name of the directory where the model files are stored
-        :return: A list of all the object the model can detect
+        :param model_name: name of the directory where the model files are stored
+        :return: list of all the object the model can detect
         """
-        PATH_TO_LABELS = os.path.join(CWD_PATH, 'Inference', model_name, LABELMAP_NAME)
+        PATH_TO_LABELS = os.path.join(CWD_PATH, 'Inference/models', model_name, LABELMAP_NAME)
         with open(PATH_TO_LABELS, 'r') as f:
             labels = [line.strip() for line in f.readlines()]
 
@@ -35,18 +35,18 @@ class ObjectDetector:
 
         return labels
 
-    def setup_model(self):
+    def setup_model(self) -> None:
         self.input_details = self.interpreter.get_input_details()
         self.output_details = self.interpreter.get_output_details()
         self.height = self.input_details[0]['shape'][1]
         self.width = self.input_details[0]['shape'][2]
         self.floating_model = (self.input_details[0]['dtype'] == np.float32)
 
-    async def detect(self, frame, objects_to_detect):
+    async def detect(self, frame: list, objects_to_detect: list) -> dict:
         """
-        :param frame: Frame to perform detection on
-        :param object_to_detect: Single object o detect
-        :return: Bounding box of object if detected else None
+        :param frame: frame to perform detection on
+        :param objects_to_detect: list of objects to detect
+        :return: bounding box of object if detected else None
         """
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame_resized = cv2.resize(frame_rgb, (self.width, self.height))
@@ -61,13 +61,14 @@ class ObjectDetector:
         self.interpreter.invoke()
 
         # Retrieve detection results
-        boxes = self.interpreter.get_tensor(self.output_details[0]['index'])[0]  # Bounding box coordinates of detected objects
+        boxes = self.interpreter.get_tensor(self.output_details[0]['index'])[
+            0]  # Bounding box coordinates of detected objects
         classes = self.interpreter.get_tensor(self.output_details[1]['index'])[0]  # Class index of detected objects
         scores = self.interpreter.get_tensor(self.output_details[2]['index'])[0]  # Confidence of detected objects
 
         detected_bounding_boxes = {}
         for i in range(len(scores)):
-            if ((scores[i] > MIN_CONF_THRESHOLD) and (scores[i] <= 1.0)):
+            if (scores[i] > MIN_CONF_THRESHOLD) and (scores[i] <= 1.0):
                 # Get bounding box coordinates and store coordinates
                 # Interpreter can return coordinates that are outside of image dimensions, need to force them to be within
                 # image using max() and min()

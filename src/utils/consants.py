@@ -1,5 +1,3 @@
-"""TODO: Add a docstring!
-"""
 WIN_WIDTH, WIN_HEIGHT = 1280, 720
 RADIUS = 5
 
@@ -19,3 +17,6 @@ MIN_OVERLAP_PERCENTAGE = 75
 GRAPH_NAME = 'detect.tflite'
 LABELMAP_NAME = 'labelmap.txt'
 MIN_CONF_THRESHOLD = 0.5
+
+WAIT_KEY = 30
+

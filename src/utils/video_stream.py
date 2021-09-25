@@ -1,11 +1,11 @@
-"""TODO: Add a docstring!
-"""
 import cv2
 from threading import Thread
 
 
 class VideoStream:
-    """TODO: Add a docstring!
+    """
+    VideoStream object to process frames using threading with a stack. Can be used for both video files as well as
+    any compatible camera. Make sure to set input_stream to the correct value.
     """
     def __init__(self, resolution=(640, 480), framerate=30, input_stream=1):
         self.framerate = framerate
@@ -21,7 +21,7 @@ class VideoStream:
         if self.treading:
             self.start()
 
-    def get_frame_size(self):
+    def get_frame_size(self) -> tuple:
         """
         :return: A tuple of the width and height of the current VideoCapture
         """
@@ -36,7 +36,7 @@ class VideoStream:
         Thread(target=self.update, args=()).start()
         return self
 
-    def update(self):
+    def update(self) -> None:
         """
         keep looping indefinitely until the thread is stopped
         """
@@ -47,7 +47,7 @@ class VideoStream:
 
             (self.grabbed, self.frame) = self.stream.read()
 
-    def read(self):
+    def read(self) -> list:
         """
         :return: most recent frame from thread if threading is enables else the current frame
         """
@@ -57,7 +57,5 @@ class VideoStream:
             _, frame = self.stream.read()
             return frame
 
-    def stop(self):
-        """Mutator
-        """
+    def stop(self) -> None:
         self.stopped = True
