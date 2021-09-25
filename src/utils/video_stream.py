@@ -1,43 +1,61 @@
 import cv2
 from threading import Thread
 
+
 class VideoStream:
-    """Camera object that controls video streaming from the Picamera"""
+    """
+    VideoStream object to process frames using threading with a stack. Can be used for both video files as well as
+    any compatible camera. Make sure to set input_stream to the correct value.
+    """
+    def __init__(self, resolution=(640, 480), framerate=30, input_stream=1):
+        self.framerate = framerate
+        self.stream = cv2.VideoCapture(input_stream)
+        self.treading = True if input_stream == 1 else False
+        self.stream.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+        self.stream.set(3, resolution[0])
+        self.stream.set(4, resolution[1])
 
-    def __init__(self, resolution=(640, 480), framerate=30):
-        # Initialize the PiCamera and the camera image stream
-        self.stream = cv2.VideoCapture(1)
-        ret = self.stream.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-        ret = self.stream.set(3, resolution[0])
-        ret = self.stream.set(4, resolution[1])
+        (self.grabbed, self.frame) = self.stream.read()  # Read first frame from the stream
 
-        # Read first frame from the stream
-        (self.grabbed, self.frame) = self.stream.read()
+        self.stopped = False  # Variable to control when the camera is stopped
+        if self.treading:
+            self.start()
 
-        # Variable to control when the camera is stopped
-        self.stopped = False
+    def get_frame_size(self) -> tuple:
+        """
+        :return: A tuple of the width and height of the current VideoCapture
+        """
+        width = self.stream.get(cv2.CAP_PROP_FRAME_WIDTH)
+        height = self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        return width, height
 
     def start(self):
-        # Start the thread that reads frames from the video stream
+        """
+        start the thread that reads frames from the video stream
+        """
         Thread(target=self.update, args=()).start()
         return self
 
-    def update(self):
-        # Keep looping indefinitely until the thread is stopped
+    def update(self) -> None:
+        """
+        keep looping indefinitely until the thread is stopped
+        """
         while True:
-            # If the camera is stopped, stop the thread
             if self.stopped:
-                # Close camera resources
                 self.stream.release()
                 return
 
-            # Otherwise, grab the next frame from the stream
             (self.grabbed, self.frame) = self.stream.read()
 
-    def read(self):
-        # Return the most recent frame
-        return self.frame
+    def read(self) -> list:
+        """
+        :return: most recent frame from thread if threading is enables else the current frame
+        """
+        if self.treading:
+            return self.frame
+        else:
+            _, frame = self.stream.read()
+            return frame
 
-    def stop(self):
-        # Indicate that the camera and thread should be stopped
+    def stop(self) -> None:
         self.stopped = True
