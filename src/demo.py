@@ -10,5 +10,3 @@ inference = Inference(video)  # Pass wither a video path or camera index
 # inference.run_object_detection(model_name='postmodel', objects=['post'], tracking=True)
 inference.run_object_detection(model_name='buoymodel', objects=['badge', 'tommy'], tracking=True)
 # inference.run_object_detection(model_name='models', objects=['remote'], tracking=False)
-
-
