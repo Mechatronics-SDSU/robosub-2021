@@ -32,16 +32,21 @@ class MaestroDriver:
         if thrusts is None:
             thrusts = [0, 0, 0, 0, 0, 0]
         for i in range(6):
-            if thrusts[i] < 0 or thrusts[i] > 100 or len(thrusts) != 6:
+            if thrusts[i] < -100 or thrusts[i] > 100 or len(thrusts) != 6:
                 thrusts = MaestroDriver.most_recent_thrusts
         old_range = (100 + 100)
         new_range = (1900 - 1100)
         pulse_width = []
         # populating pulse width array
         for t in thrusts:
-            pulse_width.append((((t + 100) * new_range) / old_range) + 1100)
+            if t < 0:  # Negative value check for clockwise motor spin
+                t = t + 100
+                pulse_width.append(abs((((t + 100) * new_range) / old_range) + 700))
+            else:
+                pulse_width.append((((t + 100) * new_range) / old_range) + 1100)
+
             pulse_width[-1] = round(pulse_width[-1] * 4)/4
-        MaestroDriver.most_recent_thrusts = pulse_width
+        self.most_recent_thrusts = pulse_width
 
         # packing pulse width command
         for i in range(6):
@@ -54,7 +59,7 @@ class MaestroDriver:
 
 
 if __name__ == "__main__":
-    maestro_driver = MaestroDriver("/dev/tty.usbmodem003291351")
+    maestro_driver = MaestroDriver("/dev/ttyACM0")
     # arming sequence
     maestro_driver.set_thrusts([50, 50, 50, 50, 50, 50])
     time.sleep(0.1)
@@ -63,7 +68,7 @@ if __name__ == "__main__":
 
     # following code goes from 0 to full power for each thruster
     # (0-100/1100-1900us) then gradually steps down
-
+    ''' 
     for j in range(6):
         thrusts = [0, 0, 0, 0, 0, 0]
         i = 0
@@ -77,3 +82,41 @@ if __name__ == "__main__":
             maestro_driver.set_thrusts(thrusts)
             i -= 1
             time.sleep(0.1)
+    '''
+    print('Driving at +100')
+    maestro_driver.set_thrusts([0, 0, 100, 0, 0, 100])
+    time.sleep(1)
+    print('Driving at +75')
+    maestro_driver.set_thrusts([0, 0, 75, 0, 0, 75])
+    time.sleep(1)
+    print('Driving at +50')
+    maestro_driver.set_thrusts([0, 0, 50, 0, 0, 50])
+    time.sleep(1)
+    print('Driving at +25')
+    maestro_driver.set_thrusts([0, 0, 25, 0, 0, 25])
+    time.sleep(1)
+    print('Driving at 0')
+    maestro_driver.set_thrusts([0, 0, 0, 0, 0, 0])
+    time.sleep(1)
+    print('Driving at -25')
+    maestro_driver.set_thrusts([0, 0, -25, 0, 0, -25])
+    time.sleep(1)
+    print('Driving at -50')
+    maestro_driver.set_thrusts([0, 0, -50, 0, 0, -50])
+    time.sleep(1)
+    print('Driving at -75')
+    maestro_driver.set_thrusts([0, 0, -75, 0, 0, -75])
+    time.sleep(1)
+    print('Driving at -100')
+    maestro_driver.set_thrusts([0, 0, -100, 0, 0, -100])
+    time.sleep(1)
+    print('Driving at 0')
+    maestro_driver.set_thrusts([0, 0, 0, 0, 0, 0])
+    time.sleep(1)
+    print('Driving DOWN at 100')
+    maestro_driver.set_thrusts([100, 100, 0, 100, 100, 0])
+    time.sleep(1)
+    print('Driving UP at 100')
+    maestro_driver.set_thrusts([-100, -100, 0, -100, -100, 0])
+    time.sleep(1)
+    maestro_driver.set_thrusts([0, 0, 0, 0, 0, 0])
