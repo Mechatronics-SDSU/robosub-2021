@@ -78,10 +78,9 @@ def request_to_value(r):
     return result
 
 
-
-
 def run_server() -> None:
-    """Server's driver code
+    """Server's driver code for manual operation
+    Kept here temporarily to develop around
     """
     dev = None  # Maestro device
     maestro = None  # Maestro object
@@ -134,19 +133,6 @@ def run_grpc_server(pipe_in_from_main: any, pipe_out_to_main: any) -> None:
             server.start()
             pipe_out_to_main.send(('main', 'cmd', 'started'))
             server.wait_for_termination()
-
-
-def translate_to_bytes(list_to_bytes: list) -> bytes:
-    for i in range(len(list_to_bytes)):
-        list_to_bytes[i] += 100
-    return bytes(list_to_bytes)
-
-
-def translate_from_bytes(bytes_to_list: bytes) -> list:
-    new_list = list(bytes_to_list)
-    for i in range(len(new_list)):
-        new_list[i] += -100
-    return new_list
 
 
 def main(start=False) -> None:
